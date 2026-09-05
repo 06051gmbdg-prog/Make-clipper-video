@@ -1,0 +1,685 @@
+<html lang="id" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Character — Live Chat Automation</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter','system-ui','sans-serif'], display: ['Space Grotesk','sans-serif'] },
+      colors: {
+        ink: { 900:'#070a14', 800:'#0b1020', 700:'#111731', 600:'#1a2140' },
+      },
+      keyframes: {
+        float: { '0%,100%':{transform:'translateY(0)'} ,'50%':{transform:'translateY(-10px)'} },
+        pop: { '0%':{transform:'scale(.9)',opacity:0}, '100%':{transform:'scale(1)',opacity:1} },
+        slideUp: { '0%':{transform:'translateY(14px)',opacity:0}, '100%':{transform:'translateY(0)',opacity:1} },
+        glow: { '0%,100%':{opacity:.35}, '50%':{opacity:.9} },
+        blinkEye: { '0%,92%,100%':{transform:'scaleY(1)'}, '96%':{transform:'scaleY(.08)'} },
+        talk: { '0%,100%':{transform:'scaleY(.35)'}, '50%':{transform:'scaleY(1)'} },
+        pulseRing: { '0%':{transform:'scale(.9)',opacity:.7}, '100%':{transform:'scale(1.5)',opacity:0} }
+      },
+      animation: {
+        float:'float 5s ease-in-out infinite',
+        pop:'pop .25s ease-out both',
+        slideUp:'slideUp .3s ease-out both',
+        glow:'glow 2.4s ease-in-out infinite',
+        blink:'blinkEye 5.5s infinite',
+        talk:'talk .28s ease-in-out infinite',
+        pulseRing:'pulseRing 2s ease-out infinite'
+      }
+    }
+  }
+}
+</script>
+<style>
+  html,body{background:#070a14;}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(139,124,255,.35);border-radius:99px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(139,124,255,.6)}
+  .glass{background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.09)}
+  .grid-bg{
+    background-image:radial-gradient(circle at 20% 0%,rgba(124,92,255,.18),transparent 45%),
+                     radial-gradient(circle at 85% 20%,rgba(0,209,255,.14),transparent 40%),
+                     linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+    background-size:auto,auto,42px 42px,42px 42px;
+  }
+  .msg-enter{animation:slideUp .32s ease-out both}
+  .chip{transition:.18s}
+  .chip:hover{transform:translateY(-1px)}
+  input[type=range]{-webkit-appearance:none;height:5px;border-radius:99px;background:rgba(255,255,255,.14)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#22d3ee);cursor:pointer;box-shadow:0 0 0 4px rgba(139,124,255,.2)}
+  .switch{width:46px;height:26px;border-radius:99px;background:rgba(255,255,255,.14);position:relative;transition:.25s;cursor:pointer;flex:none}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.25s}
+  .switch.on{background:linear-gradient(135deg,#7c5cff,#22d3ee)}
+  .switch.on::after{left:23px}
+  .wave span{display:block;width:4px;border-radius:99px;background:currentColor;animation:wv 1s ease-in-out infinite}
+  @keyframes wv{0%,100%{height:6px}50%{height:22px}}
+</style>
+</head>
+<body class="font-sans text-slate-200 min-h-screen grid-bg">
+
+<!-- ===== HEADER ===== -->
+<header class="sticky top-0 z-30 backdrop-blur-xl bg-ink-900/70 border-b border-white/10">
+  <div class="max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 grid place-items-center shadow-lg shadow-violet-500/30">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2m0 14v2M5 12H3m18 0h-2m-2.9-6.1-1.4 1.4M7.3 16.7l-1.4 1.4m0-11.2 1.4 1.4m9.4 9.4 1.4 1.4M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>
+      </div>
+      <div class="leading-tight">
+        <h1 class="font-display font-bold text-white text-[15px]">Nexa<span class="text-violet-400">AI</span> Live</h1>
+        <p class="text-[11px] text-slate-400 hidden sm:block">Character Automation Suite</p>
+      </div>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2 sm:gap-3">
+      <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        Terhubung ke <span class="text-white font-semibold">Twitch · YouTube</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span> LIVE <span id="uptime" class="tabular-nums text-slate-300">00:00:00</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs">
+        <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 19.1V17a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2.1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm9-2v6m3-3h-6"/></svg>
+        <span id="viewers" class="text-white font-semibold tabular-nums">12.480</span>
+      </div>
+      <button class="hidden sm:grid place-items-center w-9 h-9 rounded-xl glass hover:bg-white/10 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M10.3 4.3a1 1 0 0 1 1-.8h1.4a1 1 0 0 1 1 .8l.2 1.3c.4.2.8.4 1.1.6l1.2-.5a1 1 0 0 1 1.2.4l.7 1.2a1 1 0 0 1-.2 1.3l-1 .8v1.2l1 .8a1 1 0 0 1 .2 1.3l-.7 1.2a1 1 0 0 1-1.2.4l-1.2-.5c-.3.2-.7.4-1.1.6l-.2 1.3a1 1 0 0 1-1 .8h-1.4a1 1 0 0 1-1-.8l-.2-1.3c-.4-.2-.8-.4-1.1-.6l-1.2.5a1 1 0 0 1-1.2-.4l-.7-1.2a1 1 0 0 1 .2-1.3l1-.8v-1.2l-1-.8a1 1 0 0 1-.2-1.3l.7-1.2a1 1 0 0 1 1.2-.4l1.2.5c.3-.2.7-.4 1.1-.6l.2-1.3Z"/><circle cx="12" cy="12" r="2.2"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+  <!-- ===== LEFT : CHARACTER ===== -->
+  <section class="lg:col-span-3 flex flex-col gap-5">
+
+    <!-- Character card -->
+    <div class="glass rounded-3xl p-5 relative overflow-hidden">
+      <div class="absolute -top-24 -right-16 w-56 h-56 rounded-full blur-3xl animate-glow" id="charGlow" style="background:#7c5cff"></div>
+
+      <div class="flex items-center justify-between mb-1 relative">
+        <span class="text-[11px] uppercase tracking-[.14em] text-slate-400 font-semibold">AI Character</span>
+        <button id="btnSwap" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 transition">Ganti</button>
+      </div>
+
+      <div class="relative mx-auto w-44 h-44 my-2 grid place-items-center">
+        <div class="absolute inset-2 rounded-full border-2 border-dashed border-white/10 animate-[spin_18s_linear_infinite]"></div>
+        <div class="absolute inset-6 rounded-full border border-white/10"></div>
+        <div class="absolute w-40 h-40 rounded-full bg-violet-500/20 animate-pulseRing" id="ring"></div>
+
+        <svg viewBox="0 0 200 200" class="w-36 h-36 animate-float relative z-10">
+          <defs>
+            <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffd9b8"/><stop offset="100%" stop-color="#f6bd91"/>
+            </linearGradient>
+            <linearGradient id="hairG" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#22d3ee"/>
+            </linearGradient>
+          </defs>
+          <!-- body -->
+          <path d="M40 200c0-33 27-52 60-52s60 19 60 52z" fill="url(#hairG)" opacity=".85"/>
+          <!-- neck -->
+          <rect x="88" y="112" width="24" height="34" rx="10" fill="#e9a87b"/>
+          <!-- head -->
+          <rect x="55" y="45" width="90" height="100" rx="42" fill="url(#skin)"/>
+          <!-- hair -->
+          <path id="hair" d="M50 92c-4-46 22-62 50-62s54 16 50 62c-6-16-8-30-18-34-14 10-46 12-62 2-8 6-14 18-20 32z" fill="url(#hairG)"/>
+          <!-- ears -->
+          <circle cx="53" cy="98" r="8" fill="#f0b189"/><circle cx="147" cy="98" r="8" fill="#f0b189"/>
+          <!-- eyes -->
+          <g class="origin-center animate-blink">
+            <ellipse cx="80" cy="97" rx="9" ry="10" fill="#fff"/>
+            <ellipse cx="120" cy="97" rx="9" ry="10" fill="#fff"/>
+            <circle cx="81" cy="98" r="4.6" fill="#243056"/>
+            <circle cx="121" cy="98" r="4.6" fill="#243056"/>
+            <circle cx="83" cy="96" r="1.6" fill="#fff"/><circle cx="123" cy="96" r="1.6" fill="#fff"/>
+          </g>
+          <!-- brows -->
+          <path d="M71 82q9-6 18-1M111 81q9-5 18 1" stroke="#5b4636" stroke-width="3.4" stroke-linecap="round" fill="none"/>
+          <!-- blush -->
+          <ellipse cx="68" cy="112" rx="8" ry="4.5" fill="#ff8fa3" opacity=".45"/>
+          <ellipse cx="132" cy="112" rx="8" ry="4.5" fill="#ff8fa3" opacity=".45"/>
+          <!-- mouth -->
+          <ellipse id="mouth" cx="100" cy="122" rx="12" ry="4" fill="#8c2f43" class="origin-center"/>
+        </svg>
+
+        <!-- waveform -->
+        <div id="waveBox" class="absolute -bottom-1 flex items-end gap-[3px] h-6 text-cyan-300 opacity-0 transition-opacity">
+          <span style="animation-delay:0s"></span><span style="animation-delay:.15s"></span><span style="animation-delay:.3s"></span>
+          <span style="animation-delay:.45s"></span><span style="animation-delay:.2s"></span><span style="animation-delay:.35s"></span>
+        </div>
+      </div>
+
+      <div class="text-center relative">
+        <h2 id="charName" class="font-display font-bold text-xl text-white">Aiko</h2>
+        <p id="charRole" class="text-xs text-slate-400 mt-0.5">Host Virtual · Persona Santai</p>
+        <div class="mt-3 flex items-center justify-center gap-2">
+          <span id="charState" class="px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">● Siap</span>
+          <span class="px-3 py-1 rounded-full text-[11px] font-semibold bg-white/8 border border-white/10 text-slate-300">Voice ID: id-ID</span>
+        </div>
+      </div>
+
+      <!-- persona selector -->
+      <div class="mt-5">
+        <p class="text-[11px] uppercase tracking-[.14em] text-slate-400 font-semibold mb-2">Kepribadian</p>
+        <div id="personaWrap" class="grid grid-cols-2 gap-2"></div>
+      </div>
+    </div>
+
+    <!-- automation -->
+    <div class="glass rounded-3xl p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-semibold text-white text-sm">Balas Otomatis</p>
+          <p class="text-[11px] text-slate-400">AI menjawab chat secara real-time</p>
+        </div>
+        <div id="autoSwitch" class="switch on"></div>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <div>
+          <div class="flex justify-between text-[11px] mb-1.5">
+            <span class="text-slate-400">Kecepatan balas</span><span id="delayVal" class="text-violet-300 font-semibold">1.8 dtk</span>
+          </div>
+          <input id="delay" type="range" min="5" max="60" value="18" class="w-full">
+        </div>
+        <div>
+          <div class="flex justify-between text-[11px] mb-1.5">
+            <span class="text-slate-400">Probabilitas membalas</span><span id="rateVal" class="text-cyan-300 font-semibold">70%</span>
+          </div>
+          <input id="rate" type="range" min="10" max="100" value="70" class="w-full">
+        </div>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button data-toggle="greet" class="tog chip text-[11px] px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-400/40 text-violet-200 font-semibold">Sapa Member Baru</button>
+          <button data-toggle="thanks" class="tog chip text-[11px] px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-400/40 text-violet-200 font-semibold">Terima Donasi</button>
+          <button data-toggle="filter" class="tog chip text-[11px] px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-400/40 text-violet-200 font-semibold">Filter Kata Kasar</button>
+          <button data-toggle="voice" class="tog chip text-[11px] px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-400/40 text-violet-200 font-semibold">Voice Reply (TTS)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- stats -->
+    <div class="grid grid-cols-3 gap-3">
+      <div class="glass rounded-2xl p-3 text-center">
+        <p id="sMsg" class="font-display font-bold text-lg text-white tabular-nums">0</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">Chat Masuk</p>
+      </div>
+      <div class="glass rounded-2xl p-3 text-center">
+        <p id="sRep" class="font-display font-bold text-lg text-cyan-300 tabular-nums">0</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">Dibalas AI</p>
+      </div>
+      <div class="glass rounded-2xl p-3 text-center">
+        <p id="sPct" class="font-display font-bold text-lg text-violet-300 tabular-nums">0%</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">Cakupan</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CENTER : STREAM ===== -->
+  <section class="lg:col-span-6 flex flex-col gap-5">
+    <div class="glass rounded-3xl overflow-hidden relative">
+      <div class="aspect-video relative bg-gradient-to-br from-ink-700 via-ink-800 to-black">
+        <!-- scene -->
+        <div class="absolute inset-0 opacity-40" style="background:radial-gradient(circle at 50% 60%,rgba(124,92,255,.5),transparent 60%)"></div>
+        <div class="absolute inset-0 grid place-items-center">
+          <div class="text-center">
+            <div class="w-20 h-20 mx-auto rounded-2xl bg-white/5 border border-white/10 grid place-items-center mb-3">
+              <svg class="w-9 h-9 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10l4.5-2.6v9.2L15 14M4 7.5A2.5 2.5 0 0 1 6.5 5h6A2.5 2.5 0 0 1 15 7.5v9A2.5 2.5 0 0 1 12.5 19h-6A2.5 2.5 0 0 1 4 16.5z"/></svg>
+            </div>
+            <p class="text-xs text-slate-500">Live Scene · <span class="text-slate-400">Gaming + AI Cam</span></p>
+          </div>
+        </div>
+
+        <!-- OBS-like overlays -->
+        <div class="absolute top-3 left-3 flex items-center gap-2">
+          <span class="px-2.5 py-1 rounded-md bg-rose-600 text-white text-[10px] font-bold tracking-wider animate-pulse">REC</span>
+          <span class="px-2.5 py-1 rounded-md bg-black/50 backdrop-blur text-[10px] font-medium">1080p60 · 6.2 Mbps</span>
+        </div>
+        <div class="absolute top-3 right-3 flex items-center gap-2">
+          <span class="px-2.5 py-1 rounded-md bg-black/50 backdrop-blur text-[10px] font-medium flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Latency 1.2s
+          </span>
+        </div>
+
+        <!-- AI CAM bubble -->
+        <div class="absolute bottom-3 left-3 w-24 sm:w-32 aspect-square rounded-2xl overflow-hidden border-2 border-white/15 shadow-2xl bg-gradient-to-br from-violet-600/40 to-cyan-500/30 backdrop-blur">
+          <svg viewBox="0 0 200 200" class="w-full h-full">
+            <rect x="55" y="52" width="90" height="100" rx="42" fill="url(#skin)"/>
+            <rect x="88" y="118" width="24" height="34" rx="10" fill="#e9a87b"/>
+            <path d="M50 96c-4-46 22-62 50-62s54 16 50 62c-6-16-8-30-18-34-14 10-46 12-62 2-8 6-14 18-20 32z" fill="url(#hairG)"/>
+            <g class="origin-center animate-blink">
+              <ellipse cx="80" cy="100" rx="8" ry="9" fill="#fff"/><ellipse cx="120" cy="100" rx="8" ry="9" fill="#fff"/>
+              <circle cx="81" cy="101" r="4.2" fill="#243056"/><circle cx="121" cy="101" r="4.2" fill="#243056"/>
+            </g>
+            <ellipse id="mouth2" cx="100" cy="126" rx="10" ry="3.5" fill="#8c2f43" class="origin-center"/>
+          </svg>
+          <span class="absolute bottom-1 left-1 text-[8px] px-1.5 py-0.5 rounded bg-black/60 font-semibold">AI CAM</span>
+        </div>
+
+        <!-- stream chat overlay -->
+        <div class="hidden sm:block absolute bottom-3 right-3 w-56 space-y-1.5 text-[11px]">
+          <div class="msg-enter px-2.5 py-1.5 rounded-lg bg-black/45 backdrop-blur border border-white/10"><b class="text-cyan-300">dewi_g:</b> <span class="text-slate-200">wah keren banget setupnya!</span></div>
+          <div class="msg-enter px-2.5 py-1.5 rounded-lg bg-violet-600/30 backdrop-blur border border-violet-400/30"><b class="text-violet-200">Aiko ✦AI</b> <span class="text-white">makasih dewi! ✨</span></div>
+        </div>
+      </div>
+
+      <!-- quick controls -->
+      <div class="p-4 flex flex-wrap items-center gap-2 border-t border-white/10">
+        <button id="btnShout" class="chip text-xs font-semibold px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-400 hover:to-indigo-400 text-white shadow-lg shadow-violet-600/25 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Zm12-3a5 5 0 0 1 0 8"/></svg>
+          AI Shout-out
+        </button>
+        <button id="btnTrigger" class="chip text-xs font-semibold px-4 py-2 rounded-xl glass hover:bg-white/10 flex items-center gap-2">
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 3v3m0 12v3m9-9h-3M6 12H3m14.5-6.5-2 2m-7 7-2 2m0-11 2 2m7 7 2 2"/></svg>
+          Simulasi Donasi
+        </button>
+        <button id="btnClear" class="chip text-xs font-semibold px-4 py-2 rounded-xl glass hover:bg-white/10">Bersihkan Chat</button>
+        <div class="ml-auto flex items-center gap-2 text-[11px] text-slate-400">
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-violet-400"></span>Auto-reply</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Donasi</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>System</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- trigger rules -->
+    <div class="glass rounded-3xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="font-semibold text-white text-sm">Trigger &amp; Keyword Rule</p>
+          <p class="text-[11px] text-slate-400">AI akan menjawab otomatis saat kata kunci terdeteksi</p>
+        </div>
+        <button class="text-[11px] px-3 py-1.5 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 transition">+ Tambah Rule</button>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-2.5" id="rules"></div>
+    </div>
+  </section>
+
+  <!-- ===== RIGHT : LIVE CHAT ===== -->
+  <section class="lg:col-span-3 flex flex-col gap-4">
+    <div class="glass rounded-3xl flex flex-col overflow-hidden flex-1 min-h-[560px]">
+      <div class="px-5 py-4 border-b border-white/10 flex items-center gap-3">
+        <div class="relative">
+          <span class="absolute inset-0 rounded-lg bg-emerald-400/30 animate-ping"></span>
+          <span class="relative block w-2.5 h-2.5 rounded-lg bg-emerald-400"></span>
+        </div>
+        <div>
+          <p class="font-semibold text-white text-sm leading-tight">Live Chat</p>
+          <p id="chatRate" class="text-[11px] text-slate-400">0 pesan/menit</p>
+        </div>
+        <div class="ml-auto flex gap-1">
+          <button class="filter-btn text-[10px] px-2.5 py-1 rounded-lg bg-white/10 text-white font-semibold" data-f="all">Semua</button>
+          <button class="filter-btn text-[10px] px-2.5 py-1 rounded-lg text-slate-400 hover:bg-white/8" data-f="ai">AI</button>
+          <button class="filter-btn text-[10px] px-2.5 py-1 rounded-lg text-slate-400 hover:bg-white/8" data-f="alert">Alert</button>
+        </div>
+      </div>
+
+      <div id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-3 px-3"></div>
+
+      <!-- typing -->
+      <div id="typing" class="px-5 pb-2 hidden items-center gap-2 text-[11px] text-slate-400">
+        <div class="flex gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style="animation-delay:0s"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style="animation-delay:.15s"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style="animation-delay:.3s"></span>
+        </div>
+        <span id="typingName">Aiko</span> sedang mengetik…
+      </div>
+
+      <!-- quick reply -->
+      <div class="px-4 pb-2 flex gap-1.5 overflow-x-auto" id="quickReplies"></div>
+
+      <!-- input -->
+      <div class="p-3 border-t border-white/10 flex items-center gap-2">
+        <div class="flex-1 relative">
+          <input id="manualInput" type="text" placeholder="Kirim chat sebagai streamer…"
+            class="w-full bg-white/6 border border-white/10 rounded-xl pl-3.5 pr-9 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:border-violet-400/60 focus:bg-white/10 transition">
+          <button id="btnEmoji" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-sm">😄</button>
+        </div>
+        <button id="btnSend" class="w-10 h-10 grid place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 hover:opacity-90 transition shadow-lg shadow-violet-600/30">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12 20 4.5 15 20l-3.5-6.2L4.5 12Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- moderation log -->
+    <div class="glass rounded-2xl p-4">
+      <p class="text-[11px] uppercase tracking-[.14em] text-slate-400 font-semibold mb-2">Moderation Log</p>
+      <div id="modLog" class="space-y-1.5 text-[11px] max-h-28 overflow-y-auto pr-1">
+        <p class="text-slate-500">Belum ada aktivitas…</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toastWrap" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 space-y-2 w-[92%] max-w-sm"></div>
+
+<script>
+/* ============ DATA ============ */
+const CHARACTERS = [
+  { name:'Aiko',   role:'Host Virtual · Persona Santai', hair:'#8b5cf6', glow:'#7c5cff' },
+  { name:'Raka',   role:'Caster Game · Persona Gen Z',   hair:'#22d3ee', glow:'#06b6d4' },
+  { name:'Nova',   role:'Chat Mod · Persona Profesional',hair:'#f472b6', glow:'#ec4899' },
+  { name:'Bimo',   role:'Storyteller · Persona Hangat',  hair:'#fbbf24', glow:'#f59e0b' },
+];
+const PERSONAS = {
+  santai:{ label:'Santai', tone:'bro', color:'violet' },
+  genz:{ label:'Gen Z', tone:'genz', color:'cyan' },
+  prof:{ label:'Profesional', tone:'pro', color:'emerald' },
+  hangat:{ label:'Ramah', tone:'warm', color:'amber' },
+};
+let persona = 'santai';
+
+const NAMES = ['dewi_gaming','rizky.af','nadia_playz','budi123','kalina_x','fajar_dev','sinta.wav','oyo_streams','mikasa_id','gilang_r','tania_k','randy.pro'];
+const AV = ['#f472b6','#38bdf8','#facc15','#34d399','#a78bfa','#fb7185','#f97316'];
+const MSGS = [
+  'hai kak, barusan join 👋','streamnya rame banget hari ini','song request dong kak 🎵',
+  'AI nya lucu wkwkwk','itu karakternya dibikin pakai apa sih?','mabar nggak bang?','udah rank apa sekarang?',
+  'kualitas camnya jernih banget','kak boleh shoutout ig aku nggak?','ini live tiap hari jam berapa?',
+  'suara AI nya natural banget','wkwkwk anjir kocak','gas lanjut! 🔥','aku dari medan nih kak',
+  'setup pc nya apa bang?','kok bisa sih AI nya baca chat','mantap jiwa','nanya dong, ini pake tools apa?',
+  'barusan sub, senang bisa join','chatnya pada pada diem nih','ada yang dari lampung nggak?','GG wp 👏'
+];
+const REPLIES = {
+  santai:['wkwk iya sih bener banget 🤙','nah ini yang paling seru, stay tuned ya','oke kak, noted! nanti aku bahas','haloooo selamat datang! santai aja disini 😄','wah makasih udah nonton, enjoy ya!','boleh banget, gas aja 🚀','iyaa emang serem sih, tapi seru haha','aku cek dulu ya kak, bentar…'],
+  genz:['slay banget bang 🔥','no cap, itu bener sih','iyaaa gaskeun bestie ✨','wkwkwk auto no debat','itu mah level biasa, nanti naik lagi 😎','santuyy, santuyy','bener banget best, 100% setuju','tunggu reveal nya nih, epic sih'],
+  prof:['Terima kasih atas masukannya, kak. 👍','Baik, akan saya cek dan laporkan lebih lanjut.','Pertanyaan bagus — jawabannya akan saya bahas setelah segmen ini.','Selamat bergabung, semoga betah di stream kami.','Semua info terkait jadwal sudah ada di deskripsi ya kak.','Saya catat, nanti saya sampaikan ke tim.','Baik, request-nya sudah masuk antrian.','Terima kasih banyak atas dukungannya 🙏'],
+  warm:['Halo kak, makasih udah mampir 💛','Aduh senangnya kamu join disini, semangat terus ya!','Iya kak, tenang aja, di sini semua nyaman 😊','Wah dari jauh ya, terima kasih udah nonton sampai sini 🤗','Semoga harimu menyenangkan ya kak!','Boleh banget, nanti aku bantu sebisaku ✨','Makasih banyak doanya, berarti banget 🥰','Yuk kita sama-sama seru-seruan malam ini!']
+};
+const RULES = [
+  { kw:'!halo, hai, pagi, malam', a:'Menjawab sapaan dengan salam + perkenalan singkat', on:true },
+  { kw:'!song, request lagu', a:'Mencatat request dan mengecek antrian playlist', on:true },
+  { kw:'!umur, berapa tahun', a:'Menjawab umur karakter (21, fiktif)', on:true },
+  { kw:'sc, scam, cheat', a:'Menolak dengan sopan & arahkan ke aturan stream', on:false },
+  { kw:'!sponsor, kerja sama', a:'Memberikan email bisnis resmi', on:true },
+  { kw:'kak, min, bang', a:'Merespon panggilan dengan ramah', on:true },
+];
+const QUICK = ['Halo semuanya! 👋','Makasih udah nonton!','Request lagu dikomen ya 🎵','Jangan lupa follow!','Santai aja, kita enjoy 😄'];
+
+/* ============ STATE ============ */
+let auto = true, msgCount = 0, repCount = 0, filters = {greet:true,thanks:true,filter:true,voice:false};
+let filterMode = 'all', charIdx = 0, chatting = [], busy = false;
+
+/* ============ HELPERS ============ */
+const $ = s => document.querySelector(s);
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function toast(msg, color='violet'){
+  const el = document.createElement('div');
+  el.className = `msg-enter glass rounded-2xl px-4 py-3 text-sm text-white shadow-2xl border-l-4 border-${color}-400`;
+  el.textContent = msg;
+  $('#toastWrap').appendChild(el);
+  setTimeout(()=>{ el.style.transition='.4s'; el.style.opacity=0; el.style.transform='translateY(10px)'; setTimeout(()=>el.remove(),400); }, 2600);
+}
+function logMod(text, color='text-slate-400'){
+  const box = $('#modLog');
+  if(box.querySelector('p.text-slate-500')) box.innerHTML='';
+  const t = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+  const d = document.createElement('div');
+  d.className = `msg-enter flex gap-2 ${color}`;
+  d.innerHTML = `<span class="text-slate-600 tabular-nums">${t}</span><span>${text}</span>`;
+  box.prepend(d);
+  while(box.children.length>25) box.lastChild.remove();
+}
+
+/* ============ CHAT RENDER ============ */
+function addMsg(m){
+  chatting.push(m);
+  if(chatting.length>60) chatting.shift();
+  const box = $('#chatBox');
+  const el = document.createElement('div');
+  el.dataset.type = m.type;
+  el.className = 'msg-enter';
+  const visible = filterMode==='all' || (filterMode==='ai' && m.type==='ai') || (filterMode==='alert' && m.type==='alert');
+  el.style.display = visible ? '' : 'none';
+
+  if(m.type==='alert'){
+    el.innerHTML = `<div class="rounded-2xl p-3 bg-gradient-to-br from-amber-500/25 to-orange-600/10 border border-amber-400/30">
+      <div class="flex items-center gap-2 text-[11px] text-amber-200 font-bold uppercase tracking-wider">
+        <span>🎁</span> ${m.label}
+      </div>
+      <p class="mt-1 text-sm text-white"><b>${m.user}</b> ${m.text}</p>
+      <p class="mt-1 text-[11px] text-amber-200/80 tabular-nums">Rp${m.amount.toLocaleString('id-ID')}</p>
+    </div>`;
+  } else if(m.type==='ai'){
+    el.innerHTML = `<div class="rounded-2xl rounded-tl-md p-3 bg-gradient-to-br from-violet-500/25 to-indigo-600/10 border border-violet-400/30">
+      <div class="flex items-center gap-1.5 mb-1">
+        <span class="text-[11px] font-bold text-violet-100">${$('#charName').textContent}</span>
+        <span class="text-[9px] px-1.5 py-0.5 rounded bg-violet-400/25 text-violet-100 font-bold tracking-wide">✦ AI</span>
+        ${filters.voice?'<span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-200 font-bold">🔊 VOICE</span>':''}
+      </div>
+      <p class="text-[13px] leading-snug text-white">${m.text}</p>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="flex items-start gap-2.5">
+      <div class="w-7 h-7 rounded-lg grid place-items-center text-[11px] font-bold text-white flex-none" style="background:${m.color}">${m.user[0].toUpperCase()}</div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-[12px] font-semibold" style="color:${m.color}">${m.user}</span>
+          ${m.sub?`<span class="text-[9px] px-1 py-px rounded bg-violet-500/25 text-violet-200 font-bold">SUB</span>`:''}
+          <span class="text-[10px] text-slate-600 tabular-nums">${m.time}</span>
+        </div>
+        <p class="text-[13px] text-slate-300 leading-snug break-words">${m.text}</p>
+      </div>
+    </div>`;
+  }
+  box.appendChild(el);
+  box.scrollTo({top:box.scrollHeight, behavior:'smooth'});
+  while(box.children.length>60){ box.removeChild(box.firstChild); }
+}
+
+/* ============ AI LOGIC ============ */
+function pickReply(text){
+  const t = text.toLowerCase();
+  if(/(halo|hai|pagi|siang|malam|assalamualaikum|hello)/.test(t))
+    return rnd(['Halo kak! 👋 Selamat datang di stream, semangat terus ya!','Haiii! Makasih udah mampir, santai aja disini 😄','Halo halo! Baru join? Welcome 🎉']);
+  if(/(request|song|lagu|musik)/.test(t))
+    return rnd(['Request lagunya tulis di komen ya, nanti masuk antrian playlist 🎵','Siap! Tulis request lagunya, aku catat satu-satu ✍️','Boleh banget, ketik !song <judul> biar langsung masuk antrian 🎶']);
+  if(/(umur|berapa tahun|age)/.test(t))
+    return 'Umurku 21 tahun, tapi otakku di-training ribuan jam wkwk 😄';
+  if(/(sponsor|kerja sama|business|endors)/.test(t))
+    return 'Untuk kerja sama bisnis, silakan email ke partner@nexaai.id ya kak 📩';
+  if(/(tools|pake apa|gimana cara|how)/.test(t))
+    return rnd(['Aku dijalankan NexaAI Engine dengan STT + LLM + TTS real-time ⚡','Semua pipeline-nya real-time: baca chat → nalar → balas suara. Keren kan? 😎']);
+  if(/(scam|penipu|cheat|kontol|anjing|goblok)/.test(t))
+    return 'Mohon jaga bahasa ya kak, di sini kita santai tapi tetap sopan 🙏';
+  if(/(sub|subscribe|member|follow)/.test(t))
+    return rnd(['Wah makasih banget udah subscribe! Senang kamu join keluarga stream ini 💜','Terima kasih supportnya! Nanti aku shout-out ya ✨']);
+  if(/(gg|mantap|keren|top|jinwo)/.test(t))
+    return rnd(['Makasih! 😄🔥','GG juga kak! Semangat terus 💪','Yeay, makasih pujiannya!']);
+  if(/(kak|bang|min|sis|bro)/.test(t))
+    return rnd(['Iya kak, ada yang bisa kubantu? 😊','Halo kak! Ada yang mau ditanyain?','Siap kak, dengerin sampai habis ya ✨']);
+  return rnd(REPLIES[persona]);
+}
+
+function speak(on){
+  $('#mouth').classList.toggle('animate-talk', on);
+  $('#mouth2').classList.toggle('animate-talk', on);
+  $('#waveBox').style.opacity = on ? 1 : 0;
+  $('#charState').className = on
+    ? 'px-3 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25'
+    : 'px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25';
+  $('#charState').textContent = on ? '● Berbicara' : '● Siap';
+  $('#ring').style.background = on ? '#22d3ee' : '#7c5cff';
+}
+
+async function aiRespondTo(msg){
+  if(busy) return;
+  busy = true;
+  await sleep(500 + Math.random()*600);
+  $('#typing').classList.remove('hidden'); $('#typing').classList.add('flex');
+  await sleep(900 + Math.random()*900);
+  $('#typing').classList.add('hidden'); $('#typing').classList.remove('flex');
+  speak(true);
+  const reply = pickReply(msg.text);
+  await sleep(700);
+  addMsg({ type:'ai', text:reply });
+  repCount++; updateStats();
+  logMod(`<span class="text-violet-300">AI membalas</span> <span class="text-slate-300">${msg.user}</span>`);
+  await sleep(1200 + Math.random()*1200);
+  speak(false);
+  busy = false;
+}
+
+async function incoming(){
+  const now = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+  const m = { type:'user', user:rnd(NAMES), color:rnd(AV), text:rnd(MSGS), sub:Math.random()<.25, time:now };
+  msgCount++;
+  addMsg(m); updateStats();
+  if(filters.filter && /(scam|anjing|goblok|kontol)/.test(m.text.toLowerCase())){
+    logMod(`<span class="text-rose-400">Kata kasar difilter</span> dari <span class="text-slate-300">${m.user}</span>`,'text-rose-300');
+  }
+  if(auto && !busy && Math.random()*100 < +$('#rate').value){
+    setTimeout(()=>aiRespondTo(m), (+$('#delay').value)*100);
+  }
+  setTimeout(incoming, 2200 + Math.random()*3800);
+}
+
+async function donation(kind='Super Chat'){
+  const user = rnd(NAMES), amount = rnd([10000,25000,50000,100000,250000]);
+  addMsg({ type:'alert', user, label:kind, text:rnd(['Semangat terus kak!','Lanjutkan streamnya, keren!','Makasih banyak ya!','Sukses selalu!']), amount });
+  msgCount++; updateStats();
+  logMod(`<span class="text-amber-300">${kind} masuk</span> dari <span class="text-slate-300">${user}</span>`,'text-amber-200');
+  toast(`🎉 ${kind} ${amount>=100000?'BESAR ':''}dari ${user} — Rp${amount.toLocaleString('id-ID')}`,'amber');
+  if(filters.thanks && auto){
+    setTimeout(()=>aiRespondTo({user, text:'donasi terima kasih'}), 900);
+  }
+}
+
+function updateStats(){
+  $('#sMsg').textContent = msgCount;
+  $('#sRep').textContent = repCount;
+  $('#sPct').textContent = msgCount? Math.round(repCount/msgCount*100)+'%' : '0%';
+  $('#chatRate').textContent = Math.round(msgCount/Math.max(1,elapsedMin())) + ' pesan/menit';
+}
+let start = Date.now();
+const elapsedMin = ()=> Math.max(0.05,(Date.now()-start)/60000);
+
+/* ============ UI BUILD ============ */
+function buildPersonas(){
+  const w = $('#personaWrap'); w.innerHTML='';
+  Object.entries(PERSONAS).forEach(([k,v])=>{
+    const b = document.createElement('button');
+    b.className = `chip text-xs font-semibold py-2 rounded-xl border transition ${k===persona?'bg-violet-500/25 border-violet-400/50 text-violet-100':'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`;
+    b.textContent = v.label;
+    b.onclick = ()=>{ persona=k; buildPersonas(); toast(`Kepribadian diubah ke "${v.label}"`); logMod(`<span class="text-cyan-300">Persona diganti</span> → ${v.label}`); };
+    w.appendChild(b);
+  });
+}
+function buildRules(){
+  const w = $('#rules'); w.innerHTML='';
+  RULES.forEach((r,i)=>{
+    const d = document.createElement('div');
+    d.className = 'p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition';
+    d.innerHTML = `<div class="flex items-start gap-2">
+      <div class="switch ${r.on?'on':''} scale-75 -mt-1 -ml-1" data-i="${i}"></div>
+      <div class="min-w-0">
+        <p class="text-[12px] font-semibold text-cyan-300 truncate">${r.kw}</p>
+        <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">${r.a}</p>
+      </div></div>`;
+    d.querySelector('.switch').onclick = e=>{
+      r.on = !r.on; e.target.classList.toggle('on', r.on);
+      logMod(`Rule <span class="text-slate-200">${r.kw.split(',')[0]}</span> ${r.on?'diaktifkan':'dinonaktifkan'}`);
+    };
+    w.appendChild(d);
+  });
+}
+function buildQuick(){
+  const w = $('#quickReplies'); w.innerHTML='';
+  QUICK.forEach(q=>{
+    const b = document.createElement('button');
+    b.className='chip whitespace-nowrap text-[11px] px-3 py-1.5 rounded-full bg-white/7 border border-white/10 text-slate-300 hover:bg-white/15';
+    b.textContent = q;
+    b.onclick = ()=> sendManual(q);
+    w.appendChild(b);
+  });
+}
+
+function sendManual(text){
+  if(!text.trim()) return;
+  addMsg({ type:'ai', text });
+  repCount++; updateStats();
+  speak(true); setTimeout(()=>speak(false), 1200);
+  $('#manualInput').value='';
+  logMod('<span class="text-slate-300">Streamer mengirim chat manual</span>');
+}
+
+/* ============ EVENTS ============ */
+$('#autoSwitch').onclick = e=>{
+  auto = !auto; e.target.classList.toggle('on', auto);
+  toast(auto?'✅ Balas otomatis AKTIF':'⏸️ Balas otomatis DIJEDA', auto?'emerald':'rose');
+  logMod(`Auto-reply ${auto?'<span class="text-emerald-300">diaktifkan</span>':'<span class="text-rose-300">dijeda</span>'}`);
+};
+$('#delay').oninput = e=> $('#delayVal').textContent = (e.target.value/10).toFixed(1)+' dtk';
+$('#rate').oninput = e=> $('#rateVal').textContent = e.target.value+'%';
+document.querySelectorAll('.tog').forEach(b=>{
+  b.onclick = ()=>{
+    const k=b.dataset.toggle; filters[k]=!filters[k];
+    b.className = `tog chip text-[11px] px-3 py-2 rounded-xl border font-semibold transition ${filters[k]?'bg-violet-500/20 border-violet-400/40 text-violet-200':'bg-white/5 border-white/10 text-slate-500'}`;
+  };
+});
+$('#btnSend').onclick = ()=> sendManual($('#manualInput').value);
+$('#manualInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendManual($('#manualInput').value); });
+$('#btnEmoji').onclick = ()=>{ $('#manualInput').value += rnd(['😄','🔥','💜','✨','🎮','👍']); $('#manualInput').focus(); };
+$('#btnTrigger').onclick = ()=> donation(rnd(['Super Chat','Donasi','Membership']));
+$('#btnShoutout').onclick = ()=>{ };
+$('#btnShout').onclick = ()=>{
+  const u = rnd(NAMES);
+  speak(true);
+  setTimeout(()=>{ addMsg({type:'ai', text:`Halo <b class="text-cyan-300">@${u}</b>! 👋 Makasih udah join, semoga betah ya! ✨`}); repCount++; updateStats(); speak(false); },1200);
+  logMod(`<span class="text-cyan-300">Shout-out</span> → ${u}`);
+};
+$('#btnClear').onclick = ()=>{ $('#chatBox').innerHTML=''; chatting=[]; toast('🧹 Chat dibersihkan','cyan'); };
+$('#btnSwap').onclick = ()=>{
+  charIdx = (charIdx+1)%CHARACTERS.length;
+  const c = CHARACTERS[charIdx];
+  $('#charName').textContent = c.name;
+  $('#charRole').textContent = c.role;
+  $('#charGlow').style.background = c.glow;
+  $('#ring').style.background = c.glow;
+  document.getElementById('hair').setAttribute('fill', c.hair);
+  $('#typingName').textContent = c.name;
+  toast(`👤 Karakter diganti ke ${c.name}`,'cyan');
+  logMod(`<span class="text-cyan-300">Karakter aktif</span> → ${c.name}`);
+};
+document.querySelectorAll('.filter-btn').forEach(b=>{
+  b.onclick = ()=>{
+    filterMode = b.dataset.f;
+    document.querySelectorAll('.filter-btn').forEach(x=>{
+      x.className = 'filter-btn text-[10px] px-2.5 py-1 rounded-lg transition ' + (x===b?'bg-white/10 text-white font-semibold':'text-slate-400 hover:bg-white/8');
+    });
+    document.querySelectorAll('#chatBox > div').forEach(el=>{
+      const t = el.dataset.type;
+      el.style.display = filterMode==='all'||(filterMode==='ai'&&t==='ai')||(filterMode==='alert'&&t==='alert') ? '' : 'none';
+    });
+  };
+});
+
+/* ============ LOOPS ============ */
+setInterval(()=>{
+  const s = Math.floor((Date.now()-start)/1000);
+  const h=String(Math.floor(s/3600)).padStart(2,'0'), m=String(Math.floor(s%3600/60)).padStart(2,'0'), sec=String(s%60).padStart(2,'0');
+  $('#uptime').textContent = `${h}:${m}:${sec}`;
+  const v = document.getElementById('viewers');
+  const cur = parseInt(v.textContent.replace(/\D/g,''))||12480;
+  v.textContent = Math.max(9000, cur + Math.round((Math.random()-.45)*90)).toLocaleString('id-ID');
+},1000);
+
+buildPersonas(); buildRules(); buildQuick();
+logMod('<span class="text-emerald-300">NexaAI Engine</span> terhubung · model v3.2');
+logMod('<span class="text-slate-300">Voice pipeline</span> siap (id-ID · Neural TTS)');
+['hai kak barusan join 👋','request dong bang 🎵','ini AI nya beneran auto ya?'].forEach((t,i)=>setTimeout(()=>incoming.call(null)&&(msgCount&&0)||addMsg({type:'user',user:NAMES[i],color:AV[i],text:t,time:new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})})&&(msgCount++,updateStats()), 400+i*700));
+setTimeout(incoming, 4200);
+</script>
+</body>
+</html>
