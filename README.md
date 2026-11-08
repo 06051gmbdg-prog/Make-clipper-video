@@ -20,10 +20,24 @@ python clipper.py "https://youtu.be/XXXX" -s 90 -e 135 --vertical --watermark "@
 
 Format waktu: `SS`, `MM:SS`, atau `HH:MM:SS`.
 
+### Beberapa bagian
+
+```bash
+# Rentang 1:00-5:00 dipecah otomatis jadi bagian @ 60 detik
+python clipper.py "https://youtu.be/XXXX" -s 1:00 -e 5:00 --part-length 60 -o seri.mp4
+
+# Beberapa rentang bebas (dipisah koma)
+python clipper.py "https://youtu.be/XXXX" --segments "0:10-0:40,2:00-2:45,5:10-5:50" -o highlight.mp4
+```
+
+Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh sekali untuk semua bagian. Tidak butuh API key.
+
 | Opsi | Fungsi |
 |---|---|
 | `-s`, `--start` | Waktu mulai |
 | `-e`, `--end` | Waktu selesai |
+| `--part-length` | Pecah rentang start-end jadi bagian berdurasi sekian detik |
+| `--segments` | Beberapa rentang bebas, `MULAI-SELESAI,MULAI-SELESAI` |
 | `-o`, `--output` | Nama file hasil (default `clip.mp4`) |
 | `--vertical` | Crop tengah ke 9:16 (1080x1920) |
 | `--watermark` | Teks watermark di bagian bawah |
