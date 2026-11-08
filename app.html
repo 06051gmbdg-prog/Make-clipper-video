@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Clipper Video</title>
+<meta name="description" content="Susun perintah klip YouTube 9:16 dengan subtitel dan atur jadwal posting.">
+<meta name="theme-color" content="#08080f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clipper">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#08080f; --s1:#12121f; --s2:#1a1a2c; --line:#2a2a42;
+  --tx:#eef0f6; --mu:#9a9db5; --ac:#8b5cf6; --ac2:#6366f1;
+  --hi:#fbbf24; --ok:#34d399; --er:#fb7185;
+  --r:16px; --tab:64px;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{
+  margin:0;min-height:100dvh;color:var(--tx);
+  background:radial-gradient(120% 55% at 50% -8%,rgba(124,58,237,.24),transparent 62%),var(--bg);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px calc(var(--tab) + var(--safe-b) + 104px)}
+h1,h2,h3,p{margin:0}
+.mu{color:var(--mu)}
+.small{font-size:13px}
+
+/* header */
+.top{
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;max-width:560px;margin:0 auto;padding:calc(12px + var(--safe-t)) 16px 12px;
+  background:linear-gradient(var(--bg) 70%,transparent);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.01em}
+.brand img{width:30px;height:30px;border-radius:9px}
+.badge{font-size:11px;font-weight:800;color:#1a1204;background:var(--hi);padding:2px 7px;border-radius:99px;letter-spacing:.02em}
+
+/* komponen dasar */
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:14px 0}
+.card h2{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin-bottom:12px}
+label.f{display:block;font-size:14px;font-weight:600;margin:0 0 6px}
+input[type=text],input[type=url],input[type=datetime-local],select,textarea{
+  width:100%;min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line);
+  background:var(--s2);color:var(--tx);font:inherit;font-size:16px;
+}
+textarea{padding:12px 14px;min-height:96px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#6f7391}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.btn{
+  min-height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--s2);
+  color:var(--tx);font:inherit;font-weight:700;font-size:15px;cursor:pointer;display:inline-flex;
+  align-items:center;justify-content:center;gap:8px;text-decoration:none;
+}
+.btn{white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:linear-gradient(135deg,#7c3aed,#4f46e5);border-color:transparent;color:#fff}
+.btn.primary:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{min-height:40px;padding:0 14px;font-size:14px}
+.btn.danger{color:var(--er)}
+.btn svg,.tab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.inline{display:flex;gap:8px}
+.inline input{flex:1}
+
+/* mode */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--s2);padding:4px;border-radius:14px;margin-bottom:14px}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.seg span{display:block;text-align:center;padding:10px 4px;border-radius:10px;font-size:13.5px;font-weight:700;color:var(--mu)}
+.seg input:checked+span{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--hi);outline-offset:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--s2);color:var(--tx);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.chip[aria-pressed=true]{border-color:var(--ac);color:#fff;background:rgba(139,92,246,.22)}
+.seg-row{display:grid;grid-template-columns:24px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:8px}
+.seg-row .n{font-weight:800;color:var(--mu);text-align:center;font-size:14px}
+.x{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--s2);color:var(--mu);cursor:pointer;font-size:18px}
+
+/* pratinjau */
+.prev{display:flex;gap:16px;align-items:center}
+.ph-box{width:112px;flex:none;display:grid;place-items:center}
+.ph{
+  width:100%;aspect-ratio:9/16;border-radius:12px;border:2px solid #3a3a58;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,#312e81,#6d28d9 55%,#be185d);
+}
+.ph.land{aspect-ratio:16/9}
+.ph .cap{
+  position:absolute;left:6%;right:6%;bottom:16.7%;text-align:center;font-weight:800;font-size:8.5px;line-height:1.15;
+  color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 0 3px #000,0 1px 2px #000;
+}
+.ph.land .cap{bottom:7%;font-size:6px}
+.ph .wm{position:absolute;left:0;right:0;bottom:3%;text-align:center;font-size:5.5px;font-weight:700;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
+.prev-info{min-width:0;flex:1}
+.prev-info b{display:block;font-size:17px}
+.tl{position:relative;height:30px;background:var(--s2);border-radius:10px;overflow:hidden;margin-top:12px}
+.blk{position:absolute;top:3px;bottom:3px;border-radius:7px;background:#7c3aed;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;min-width:3px;overflow:hidden}
+.blk:nth-child(even){background:#4f46e5}
+.tl-l{display:flex;justify-content:space-between;font-size:12px;color:var(--mu);margin-top:4px;font-variant-numeric:tabular-nums}
+.files{margin-top:10px;font-size:12.5px;color:var(--mu);word-break:break-all}
+
+/* opsi */
+.opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.opt:first-of-type{padding-top:0}
+.opt b{display:block;font-size:15px}
+.opt small{color:var(--mu);font-size:13px}
+.sw{position:relative;width:50px;height:30px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;border-radius:99px;background:#34344f;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw input:checked+i{background:var(--ac)}
+.sw input:checked+i::after{transform:translateX(20px)}
+.sw input:focus-visible+i{outline:2px solid var(--hi);outline-offset:2px}
+.sub-lang{padding:12px 0;border-bottom:1px solid var(--line)}
+
+/* perintah */
+pre.cmd{
+  margin:0;padding:12px 14px;border-radius:12px;background:#0b0b14;border:1px solid var(--line);color:#c4b5fd;
+  font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all;min-height:56px;
+}
+pre.cmd.empty{color:#6f7391;font-family:inherit}
+ul.issues{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+ul.issues li{font-size:14px;padding-left:22px;position:relative}
+ul.issues li::before{content:"";position:absolute;left:4px;top:7px;width:8px;height:8px;border-radius:50%;background:var(--er)}
+ul.issues li.soft{color:var(--mu)}
+ul.issues li.soft::before{background:#6f7391}
+details{border-top:1px solid var(--line);padding:12px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:32px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--mu);font-size:20px;font-weight:400}
+details[open] summary::after{content:"–"}
+details p,details .body{margin-top:8px;color:var(--mu);font-size:14.5px}
+.hist{display:grid;gap:8px;margin-top:10px}
+.hist button{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--s2);color:var(--tx);font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace;cursor:pointer;word-break:break-all}
+.hist button small{display:block;font:12px system-ui,sans-serif;color:var(--mu);margin-bottom:2px}
+
+/* bar aksi & tab */
+.actionbar{
+  position:fixed;z-index:30;left:0;right:0;margin:0 auto;width:min(536px,calc(100% - 24px));
+  bottom:calc(var(--tab) + var(--safe-b) + 10px);display:flex;gap:12px;align-items:center;
+  padding:10px 10px 10px 16px;border-radius:18px;background:rgba(24,24,42,.96);border:1px solid #38385a;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(0,0,0,.45);
+}
+.actionbar div{flex:1;min-width:0}
+.actionbar b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actionbar small{color:var(--mu);font-size:12.5px}
+.tabs{
+  position:fixed;z-index:40;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);
+  height:calc(var(--tab) + var(--safe-b));padding-bottom:var(--safe-b);
+  background:rgba(11,11,20,.94);border-top:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--mu);text-decoration:none;font-size:12px;font-weight:700;position:relative}
+.tab[aria-current]{color:#c4b5fd}
+.tab[aria-current]::before{content:"";position:absolute;top:0;width:28px;height:3px;border-radius:0 0 4px 4px;background:var(--ac)}
+#toast{
+  position:fixed;z-index:60;left:50%;bottom:calc(var(--tab) + var(--safe-b) + 90px);transform:translate(-50%,12px);
+  background:#f4f4fb;color:#12121f;font-weight:700;font-size:14px;padding:11px 18px;border-radius:99px;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100% - 32px);text-align:center;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* jadwal */
+.vh{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:6px 0 4px}
+.vh h1{font-size:24px;letter-spacing:-.02em}
+.plan{margin:12px 0}
+.plan-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.plan h3{font-size:16px}
+.pill{flex:none;font-size:12px;font-weight:800;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mu)}
+.pill.siap{color:var(--hi);border-color:rgba(251,191,36,.5)}
+.pill.terjadwal{color:#c4b5fd;border-color:rgba(139,92,246,.6)}
+.pill.terposting{color:var(--ok);border-color:rgba(52,211,153,.5)}
+.meta{font-size:13px;color:var(--mu);margin-top:4px}
+.plan .cp{margin-top:8px;font-size:14.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.plan .acts{display:flex;gap:8px;margin-top:12px}
+.empty{text-align:center;padding:28px 12px}
+.empty p+p{margin-top:6px;font-size:14px}
+.tip{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.tip p{font-size:14px;color:var(--mu)}
+
+dialog{
+  margin:auto auto 0;width:min(560px,100%);max-width:none;max-height:92dvh;overflow:auto;border:1px solid var(--line);
+  border-radius:22px 22px 0 0;background:var(--s1);color:var(--tx);padding:18px 16px calc(18px + var(--safe-b));
+}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog h2{font-size:19px;margin-bottom:14px}
+.pchk{display:flex;gap:8px;flex-wrap:wrap}
+.pchk label{position:relative}
+.pchk input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.pchk span{display:block;padding:9px 14px;border-radius:99px;border:1px solid var(--line);background:var(--s2);font-size:14px;font-weight:600}
+.pchk input:checked+span{border-color:var(--ac);background:rgba(139,92,246,.22);color:#fff}
+.pchk input:focus-visible+span{outline:2px solid var(--hi);outline-offset:2px}
+.dfoot{display:flex;gap:10px;margin-top:18px}
+.dfoot .btn{flex:1}
+
+/* panduan */
+.step{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0;padding-top:0}
+.step .ck{flex:none;width:26px;height:26px;margin-top:2px;accent-color:var(--ac)}
+.step h3{font-size:15.5px}
+.step p{font-size:14px;color:var(--mu);margin-top:2px}
+.step .code{margin-top:8px;display:flex;gap:8px;align-items:stretch}
+.step code{flex:1;min-width:0;padding:9px 12px;border-radius:10px;background:#0b0b14;border:1px solid var(--line);color:#c4b5fd;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.prog{height:6px;border-radius:99px;background:var(--s2);overflow:hidden;margin:0 0 16px}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#34d399);transition:width .25s}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (min-width:600px){.wrap{padding-left:0;padding-right:0}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand"><img src="icons/icon.svg" alt="" width="30" height="30"> Clipper <span class="badge">9:16</span></div>
+  <button class="btn sm" id="installBtn" hidden>Pasang aplikasi</button>
+</header>
+
+<main class="wrap">
+
+  <!-- ====================== BUAT ====================== -->
+  <section id="view-buat" class="view" aria-label="Buat klip">
+    <div class="vh"><h1>Buat klip</h1></div>
+    <p class="mu small">Isi form, salin perintahnya, lalu tempel di Termux.</p>
+
+    <div class="card">
+      <label class="f" for="url">Link YouTube</label>
+      <div class="inline">
+        <input id="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://youtu.be/…">
+        <button class="btn" id="pasteBtn" type="button">Tempel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Bagian video</h2>
+      <div class="seg" role="radiogroup" aria-label="Mode pemotongan">
+        <label><input type="radio" name="mode" value="single" checked><span>Satu klip</span></label>
+        <label><input type="radio" name="mode" value="split"><span>Pecah otomatis</span></label>
+        <label><input type="radio" name="mode" value="multi"><span>Pilih sendiri</span></label>
+      </div>
+
+      <div class="pane" data-for="single split">
+        <div class="row field">
+          <div><label class="f" for="start">Mulai</label><input id="start" type="text" inputmode="decimal" autocomplete="off" placeholder="1:30"></div>
+          <div><label class="f" for="end">Selesai</label><input id="end" type="text" inputmode="decimal" autocomplete="off" placeholder="2:15"></div>
+        </div>
+        <p class="mu small">Format: <b>1:30</b>, <b>1:02:30</b>, atau detik saja (<b>90</b>).</p>
+      </div>
+
+      <div class="pane" data-for="split" style="margin-top:14px">
+        <label class="f" for="partLen">Durasi tiap bagian (detik)</label>
+        <input id="partLen" type="text" inputmode="numeric" autocomplete="off" placeholder="60">
+        <div class="chips" id="partChips">
+          <button type="button" class="chip" data-v="30" aria-pressed="false">30 dtk</button>
+          <button type="button" class="chip" data-v="45" aria-pressed="false">45 dtk</button>
+          <button type="button" class="chip" data-v="60" aria-pressed="false">60 dtk</button>
+          <button type="button" class="chip" data-v="90" aria-pressed="false">90 dtk</button>
+        </div>
+      </div>
+
+      <div class="pane" data-for="multi">
+        <div id="rows"></div>
+        <button class="btn sm" id="addRow" type="button"><svg><use href="#i-plus"/></svg> Tambah bagian</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pratinjau</h2>
+      <div class="prev">
+        <div class="ph-box"><div class="ph" id="ph"><div class="cap">halo semua selamat datang</div><div class="wm" id="phWm"></div></div></div>
+        <div class="prev-info">
+          <b id="pvTitle">–</b>
+          <span class="mu small" id="pvSub">Isi link dan waktu dulu</span>
+        </div>
+      </div>
+      <div class="tl" id="tl" aria-hidden="true"></div>
+      <div class="tl-l"><span id="tlA">0:00</span><span id="tlB">0:00</span></div>
+      <div class="files" id="files"></div>
+    </div>
+
+    <div class="card">
+      <h2>Opsi</h2>
+      <div class="opt">
+        <div><b>Rasio 9:16</b><small>Untuk Shorts, Reels, TikTok. Bagian tengah video dipotong.</small></div>
+        <span class="sw"><input type="checkbox" id="optV" role="switch" aria-label="Rasio 9:16" checked><i></i></span>
+      </div>
+      <div class="opt">
+        <div><b>Subtitel otomatis</b><small>Dari caption YouTube. Video harus punya caption.</small></div>
+        <span class="sw"><input type="checkbox" id="optS" role="switch" aria-label="Subtitel otomatis" checked><i></i></span>
+      </div>
+      <div class="sub-lang" id="langBox">
+        <label class="f" for="lang">Bahasa subtitel</label>
+        <select id="lang">
+          <option value="id">Indonesia</option>
+          <option value="en">Inggris</option>
+          <option value="ms">Melayu</option>
+          <option value="es">Spanyol</option>
+          <option value="ar">Arab</option>
+          <option value="ja">Jepang</option>
+          <option value="ko">Korea</option>
+        </select>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label class="f" for="wm">Watermark (opsional)</label>
+        <input id="wm" type="text" autocomplete="off" placeholder="@namakamu">
+      </div>
+      <div class="field">
+        <label class="f" for="file">Nama file hasil</label>
+        <input id="file" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="clip.mp4">
+        <p class="mu small" style="margin-top:6px">Disimpan ke folder Download HP. Kalau ada banyak bagian: <b>nama_part1.mp4</b>, <b>nama_part2.mp4</b>, …</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Perintah untuk Termux</h2>
+      <pre class="cmd empty" id="cmd" tabindex="0">Isi link dan waktu, perintahnya muncul di sini.</pre>
+      <ul class="issues" id="issues"></ul>
+    </div>
+
+    <div class="card" id="histCard" hidden>
+      <h2>Riwayat</h2>
+      <div class="hist" id="hist"></div>
+      <button class="btn sm" id="clearHist" type="button" style="margin-top:12px">Hapus riwayat</button>
+    </div>
+  </section>
+
+  <!-- ====================== JADWAL ====================== -->
+  <section id="view-jadwal" class="view" aria-label="Jadwal posting" hidden>
+    <div class="vh">
+      <h1>Jadwal posting</h1>
+      <button class="btn primary sm" id="newPlan" type="button"><svg><use href="#i-plus"/></svg> Baru</button>
+    </div>
+    <p class="mu small">Catatan caption dan waktu posting tiap klip. Tersimpan di HP ini saja.</p>
+    <div id="planList"></div>
+    <div class="card tip">
+      <p>Untuk memposting otomatis, unggah videonya di aplikasi Buffer lalu pilih jadwal.</p>
+      <a class="btn sm" href="https://buffer.com" target="_blank" rel="noopener">Buka Buffer</a>
+    </div>
+  </section>
+
+  <!-- ====================== PANDUAN ====================== -->
+  <section id="view-panduan" class="view" aria-label="Panduan" hidden>
+    <div class="vh"><h1>Panduan</h1></div>
+    <p class="mu small">Pengaturan sekali jalan di Termux (Android). Ketuk <b>Salin</b>, tempel di Termux dengan menahan layar lalu pilih Paste.</p>
+    <div class="card" style="margin-top:14px">
+      <div class="prog" aria-hidden="true"><i id="prog"></i></div>
+      <div id="steps"></div>
+    </div>
+
+    <div class="card">
+      <h2>Kalau ada masalah</h2>
+      <details><summary>Unsupported URL</summary><div class="body">Link yang dipakai masih contoh (misalnya XXXX). Salin link asli dari tombol <b>Bagikan</b> di YouTube dan pakai tanda kutip.</div></details>
+      <details><summary>Subtitel tidak muncul</summary><div class="body">Kemungkinan video tidak punya caption. Coba bahasa lain di opsi. Kalau tetap kosong, ffmpeg di Termux mungkin tanpa libass atau font belum tersedia: matikan subtitel dulu dan kabari lewat Issues di GitHub.</div></details>
+      <details><summary>No such file: clipper.py</summary><div class="body">Perintah dari aplikasi ini sudah memuat <b>cd ~/Make-clipper-video</b>. Pastikan langkah "Unduh Clipper" sudah dijalankan.</div></details>
+      <details><summary>Folder Download tidak bisa ditulis</summary><div class="body">Jalankan <b>termux-setup-storage</b> lalu ketuk Izinkan.</div></details>
+      <details><summary>Prosesnya lama</summary><div class="body">Memproses video di HP memang lambat. Mulai dari klip pendek, dan pastikan sinyal stabil karena ada proses unduh.</div></details>
+    </div>
+    <p class="mu small" style="margin:6px 4px 0">Gunakan hanya untuk video milikmu sendiri atau yang kamu punya izin untuk memotongnya.</p>
+  </section>
+</main>
+
+<div class="actionbar" id="actionbar">
+  <div><b id="abTitle">Belum siap</b><small id="abSub">Isi link dan waktu</small></div>
+  <button class="btn primary" id="copyBtn" type="button" disabled><svg><use href="#i-copy"/></svg> Salin</button>
+</div>
+
+<nav class="tabs" aria-label="Menu utama">
+  <a class="tab" id="tab-buat" href="#buat"><svg><use href="#i-cut"/></svg>Buat</a>
+  <a class="tab" id="tab-jadwal" href="#jadwal"><svg><use href="#i-cal"/></svg>Jadwal</a>
+  <a class="tab" id="tab-panduan" href="#panduan"><svg><use href="#i-book"/></svg>Panduan</a>
+</nav>
+
+<dialog id="planDialog" aria-labelledby="pdTitle">
+  <form id="planForm" method="dialog">
+    <h2 id="pdTitle">Jadwal baru</h2>
+    <div class="field"><label class="f" for="pTitle">Judul klip</label><input id="pTitle" type="text" autocomplete="off" required placeholder="Klip 1: bagian paling lucu"></div>
+    <div class="field"><label class="f" for="pCap">Caption</label><textarea id="pCap" placeholder="Tulis caption…"></textarea></div>
+    <div class="field"><label class="f" for="pTags">Hashtag</label><input id="pTags" type="text" autocomplete="off" autocapitalize="off" placeholder="#shorts #fyp"></div>
+    <div class="field"><span class="f" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">Platform</span>
+      <div class="pchk">
+        <label><input type="checkbox" name="plat" value="TikTok"><span>TikTok</span></label>
+        <label><input type="checkbox" name="plat" value="Reels"><span>Reels</span></label>
+        <label><input type="checkbox" name="plat" value="Shorts"><span>Shorts</span></label>
+      </div>
+    </div>
+    <div class="row field">
+      <div><label class="f" for="pWhen">Waktu posting</label><input id="pWhen" type="datetime-local"></div>
+      <div><label class="f" for="pStatus">Status</label>
+        <select id="pStatus"><option>Draf</option><option>Siap</option><option>Terjadwal</option><option>Terposting</option></select>
+      </div>
+    </div>
+    <div class="dfoot">
+      <button class="btn danger" id="pDelete" type="button" hidden>Hapus</button>
+      <button class="btn" id="pCancel" type="button">Batal</button>
+      <button class="btn primary" type="submit">Simpan</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const MIN_LAST = 3; // sama dengan clipper.py
+
+/* ---------- penyimpanan (aman bila diblokir) ---------- */
+function load(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* abaikan */ } }
+
+/* ---------- util ---------- */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  }
+  return el;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* lanjut cadangan */ }
+  const ta = h('textarea', { style: 'position:fixed;opacity:0;top:0' }); ta.value = text;
+  document.body.append(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch { /* abaikan */ }
+  ta.remove(); return ok;
+}
+const shq = (s) => "'" + s.replace(/'/g, "'\\''") + "'";
+
+/* ---------- waktu & segmen (setara clipper.py) ---------- */
+function toSeconds(v) {
+  v = String(v == null ? '' : v).trim();
+  if (!v) return NaN;
+  const p = v.split(':');
+  if (p.length > 3) return NaN;
+  let s = 0;
+  for (const x of p) { if (!/^\d+(\.\d+)?$/.test(x)) return NaN; s = s * 60 + parseFloat(x); }
+  return s;
+}
+function fmt(sec) {
+  sec = Math.round(sec);
+  const hh = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  const mm = String(m).padStart(2, '0'), ss = String(s).padStart(2, '0');
+  return hh ? `${hh}:${mm}:${ss}` : `${m}:${ss}`;
+}
+function splitRange(a, b, len) {
+  const out = [];
+  for (let t = a; t < b; t += len) out.push([t, Math.min(t + len, b)]);
+  if (out.length > 1 && out[out.length - 1][1] - out[out.length - 1][0] < MIN_LAST) {
+    const last = out.pop(); out[out.length - 1][1] = last[1];
+  }
+  return out;
+}
+function cleanFile(v) {
+  let f = String(v || '').trim().replace(/[^\w.\-]+/g, '_').replace(/\.[A-Za-z0-9]+$/, '').replace(/^[._-]+/, '');
+  return (f || 'clip') + '.mp4';
+}
+function outNames(file, n) {
+  if (n === 1) return [file];
+  const stem = file.replace(/\.mp4$/, '');
+  return Array.from({ length: n }, (_, k) => `${stem}_part${k + 1}.mp4`);
+}
+
+/* ---------- logika form -> perintah ---------- */
+function compute(st) {
+  const issues = [];
+  const add = (m, soft = false) => issues.push({ m, soft });
+
+  if (!st.url) add('Tempel link YouTube dulu.', true);
+  else if (!/^https?:\/\//i.test(st.url)) add('Link harus diawali https://');
+  else if (/XXXX|ID_VIDEO/.test(st.url)) add('Ini link contoh. Ganti dengan link video asli (tombol Bagikan di YouTube).');
+
+  let segs = [], args = [];
+  const timeOf = (label, v) => {
+    if (!v) { add(`Isi waktu ${label}.`, true); return NaN; }
+    const n = toSeconds(v);
+    if (Number.isNaN(n)) add(`Waktu ${label} tidak valid. Contoh: 1:30 atau 90.`);
+    return n;
+  };
+
+  if (st.mode === 'multi') {
+    const ok = []; let touched = false;
+    st.rows.forEach((r, i) => {
+      if (!r.s && !r.e) return;
+      touched = true;
+      if (!r.s || !r.e) { add(`Bagian ${i + 1}: isi mulai dan selesai.`, true); return; }
+      const a = toSeconds(r.s), b = toSeconds(r.e);
+      if (Number.isNaN(a) || Number.isNaN(b)) add(`Bagian ${i + 1}: format waktu tidak valid. Contoh: 1:30 atau 90.`);
+      else if (b <= a) add(`Bagian ${i + 1}: waktu selesai harus lebih besar dari mulai.`);
+      else ok.push({ s: r.s, e: r.e, a, b });
+    });
+    if (!touched) add('Isi minimal satu bagian.', true);
+    segs = ok.map((o) => [o.a, o.b]);
+    if (ok.length) args = ['--segments', shq(ok.map((o) => `${o.s}-${o.e}`).join(','))];
+  } else {
+    const a = timeOf('mulai', st.start), b = timeOf('selesai', st.end);
+    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+      if (b <= a) add('Waktu selesai harus lebih besar dari mulai.');
+      else if (st.mode === 'split') {
+        const L = Number(st.partLen);
+        if (!st.partLen) add('Isi durasi tiap bagian (detik).', true);
+        else if (!(L > 0) || !/^\d+(\.\d+)?$/.test(st.partLen)) add('Durasi bagian harus angka lebih dari 0.');
+        else { segs = splitRange(a, b, L); args = ['-s', st.start, '-e', st.end, '--part-length', String(L)]; }
+      } else { segs = [[a, b]]; args = ['-s', st.start, '-e', st.end]; }
+    }
+  }
+
+  const file = cleanFile(st.file);
+  let cmd = null;
+  if (!issues.length && segs.length) {
+    const p = ['cd ~/Make-clipper-video &&', 'python clipper.py', shq(st.url), ...args, '-o', `~/storage/downloads/${file}`];
+    if (!st.vertical) p.push('--no-vertical');
+    if (st.subtitle) { p.push('--subtitle'); if (st.lang !== 'id') p.push('--sub-lang', st.lang); }
+    if (st.watermark) p.push('--watermark', shq(st.watermark));
+    cmd = p.join(' ');
+  }
+  return { issues, segs, cmd, file };
+}
+
+/* ---------- halaman Buat ---------- */
+const E = {
+  url: $('#url'), start: $('#start'), end: $('#end'), partLen: $('#partLen'), rows: $('#rows'),
+  optV: $('#optV'), optS: $('#optS'), lang: $('#lang'), wm: $('#wm'), file: $('#file'),
+};
+const mode = () => $('input[name=mode]:checked').value;
+
+function readState() {
+  return {
+    url: E.url.value.trim(), mode: mode(), start: E.start.value.trim(), end: E.end.value.trim(),
+    partLen: E.partLen.value.trim(),
+    rows: $$('.seg-row').map((r) => ({ s: $('.s', r).value.trim(), e: $('.e', r).value.trim() })),
+    vertical: E.optV.checked, subtitle: E.optS.checked, lang: E.lang.value,
+    watermark: E.wm.value.trim(), file: E.file.value.trim(),
+  };
+}
+
+function addRow(s = '', e = '') {
+  const n = $$('.seg-row').length + 1;
+  const row = h('div', { class: 'seg-row' },
+    h('span', { class: 'n' }, String(n)),
+    h('input', { class: 's', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: n === 1 ? '0:10' : 'Mulai', 'aria-label': `Bagian ${n} mulai`, value: s }),
+    h('input', { class: 'e', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: n === 1 ? '0:40' : 'Selesai', 'aria-label': `Bagian ${n} selesai`, value: e }),
+    h('button', { class: 'x', type: 'button', 'aria-label': `Hapus bagian ${n}`, onclick: () => {
+      if ($$('.seg-row').length > 1) row.remove(); else { $('.s', row).value = ''; $('.e', row).value = ''; }
+      $$('.seg-row').forEach((r, i) => { $('.n', r).textContent = String(i + 1); });
+      render();
+    } }, '✕'));
+  E.rows.append(row);
+}
+
+function applyMode() {
+  const m = mode();
+  $$('.pane').forEach((p) => { p.hidden = !p.dataset.for.split(' ').includes(m); });
+}
+
+function renderTimeline(segs) {
+  const tl = $('#tl'); tl.replaceChildren();
+  if (!segs.length) { $('#tlA').textContent = '0:00'; $('#tlB').textContent = '0:00'; return; }
+  const min = Math.min(...segs.map((s) => s[0])), max = Math.max(...segs.map((s) => s[1])), span = max - min;
+  segs.forEach(([a, b], i) => {
+    const el = h('div', { class: 'blk' }, segs.length > 1 ? String(i + 1) : '');
+    el.style.left = ((a - min) / span * 100) + '%';
+    el.style.width = ((b - a) / span * 100) + '%';
+    tl.append(el);
+  });
+  $('#tlA').textContent = fmt(min); $('#tlB').textContent = fmt(max);
+}
+
+let current = { cmd: null };
+function render() {
+  const st = readState();
+  const r = compute(st);
+  current = r;
+
+  // opsi yang bergantung pada saklar
+  $('#langBox').hidden = !st.subtitle;
+  $('#ph').classList.toggle('land', !st.vertical);
+  $('.cap', $('#ph')).hidden = !st.subtitle;
+  $('#phWm').textContent = st.watermark;
+  $$('#partChips .chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.v === st.partLen)));
+
+  // ringkasan
+  const n = r.segs.length;
+  const total = r.segs.reduce((a, [s, e]) => a + (e - s), 0);
+  if (n) {
+    $('#pvTitle').textContent = n === 1 ? `1 klip · ${fmt(total)}` : `${n} bagian · ${fmt(total)}`;
+    $('#pvSub').textContent = (st.vertical ? '9:16' : 'Rasio asli') + (st.subtitle ? ' · subtitel' : '') + (st.watermark ? ' · watermark' : '');
+    const names = outNames(r.file, n);
+    $('#files').textContent = n <= 2 ? names.join(', ') : `${names[0]} … ${names[n - 1]}`;
+  } else {
+    $('#pvTitle').textContent = '–'; $('#pvSub').textContent = 'Isi link dan waktu dulu'; $('#files').textContent = '';
+  }
+  renderTimeline(r.segs);
+
+  // perintah + masalah
+  const pre = $('#cmd');
+  pre.textContent = r.cmd || 'Isi link dan waktu, perintahnya muncul di sini.';
+  pre.classList.toggle('empty', !r.cmd);
+  const ul = $('#issues'); ul.replaceChildren(...r.issues.map((i) => h('li', { class: i.soft ? 'soft' : '' }, i.m)));
+  $('#copyBtn').disabled = !r.cmd;
+  $('#abTitle').textContent = r.cmd ? (n === 1 ? `1 klip · ${fmt(total)}` : `${n} bagian · ${fmt(total)}`) : 'Belum siap';
+  $('#abSub').textContent = r.cmd ? 'Siap disalin ke Termux' : (r.issues[0] ? r.issues[0].m : 'Isi link dan waktu');
+
+  save('clipper.opts', { mode: st.mode, partLen: st.partLen, vertical: st.vertical, subtitle: st.subtitle, lang: st.lang, watermark: st.watermark, file: st.file });
+}
+
+function renderHist() {
+  const list = load('clipper.hist', []);
+  $('#histCard').hidden = !list.length;
+  $('#hist').replaceChildren(...list.map((it) => h('button', { type: 'button', onclick: async () => {
+    toast((await copyText(it.cmd)) ? 'Perintah disalin' : 'Gagal menyalin');
+  } }, h('small', {}, new Date(it.t).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })), it.cmd)));
+}
+
+$('#copyBtn').addEventListener('click', async () => {
+  if (!current.cmd) return;
+  const ok = await copyText(current.cmd);
+  toast(ok ? 'Perintah disalin. Tempel di Termux.' : 'Gagal menyalin. Tahan teks perintah untuk menyalin manual.');
+  if (ok) {
+    const list = load('clipper.hist', []).filter((x) => x.cmd !== current.cmd);
+    list.unshift({ cmd: current.cmd, t: Date.now() });
+    save('clipper.hist', list.slice(0, 8)); renderHist();
+  }
+});
+$('#clearHist').addEventListener('click', () => { save('clipper.hist', []); renderHist(); });
+$('#pasteBtn').addEventListener('click', async () => {
+  try { E.url.value = (await navigator.clipboard.readText()).trim(); render(); }
+  catch { toast('Tahan di kolom link lalu pilih Tempel'); E.url.focus(); }
+});
+$('#addRow').addEventListener('click', () => { addRow(); render(); const s = $$('.seg-row .s'); s[s.length - 1].focus(); });
+$('#partChips').addEventListener('click', (e) => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  E.partLen.value = c.dataset.v; render();
+});
+$('#view-buat').addEventListener('input', render);
+$('#view-buat').addEventListener('change', () => { applyMode(); render(); });
+
+/* ---------- halaman Jadwal ---------- */
+const pd = $('#planDialog');
+let editingId = null;
+const plans = () => load('clipper.plan', []);
+
+function renderPlans() {
+  const list = $('#planList'); list.replaceChildren();
+  const items = plans().sort((a, b) => (a.when && b.when) ? a.when.localeCompare(b.when) : a.when ? -1 : b.when ? 1 : a.id - b.id);
+  if (!items.length) {
+    list.append(h('div', { class: 'card empty' }, h('p', {}, 'Belum ada jadwal.'), h('p', { class: 'mu' }, 'Catat caption, hashtag, dan waktu posting tiap klip di sini.')));
+    return;
+  }
+  for (const it of items) {
+    const when = it.when ? new Date(it.when).toLocaleString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Belum ada waktu';
+    list.append(h('article', { class: 'card plan' },
+      h('div', { class: 'plan-h' }, h('h3', {}, it.title), h('span', { class: 'pill ' + it.status.toLowerCase() }, it.status)),
+      h('div', { class: 'meta' }, [when, ...(it.plats.length ? [it.plats.join(' · ')] : [])].join('  |  ')),
+      it.caption ? h('p', { class: 'cp' }, it.caption) : null,
+      h('div', { class: 'acts' },
+        h('button', { class: 'btn sm', type: 'button', onclick: async () => {
+          toast((await copyText([it.caption, it.tags].filter(Boolean).join('\n\n'))) ? 'Caption disalin' : 'Gagal menyalin');
+        } }, 'Salin caption'),
+        h('button', { class: 'btn sm', type: 'button', onclick: () => openPlan(it.id) }, 'Ubah'))));
+  }
+}
+
+function openPlan(id) {
+  editingId = id || null;
+  const it = plans().find((p) => p.id === id);
+  $('#pdTitle').textContent = it ? 'Ubah jadwal' : 'Jadwal baru';
+  $('#pTitle').value = it ? it.title : ''; $('#pCap').value = it ? it.caption : ''; $('#pTags').value = it ? it.tags : '';
+  $('#pWhen').value = it ? it.when : ''; $('#pStatus').value = it ? it.status : 'Draf';
+  $$('input[name=plat]').forEach((c) => { c.checked = !!it && it.plats.includes(c.value); });
+  $('#pDelete').hidden = !it;
+  pd.showModal();
+}
+$('#newPlan').addEventListener('click', () => openPlan());
+$('#pCancel').addEventListener('click', () => pd.close());
+$('#pDelete').addEventListener('click', () => {
+  if (!confirm('Hapus jadwal ini?')) return;
+  save('clipper.plan', plans().filter((p) => p.id !== editingId)); pd.close(); renderPlans();
+});
+$('#planForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const title = $('#pTitle').value.trim();
+  if (!title) { $('#pTitle').focus(); return; }
+  const item = {
+    id: editingId || Date.now(), title, caption: $('#pCap').value.trim(), tags: $('#pTags').value.trim(),
+    plats: $$('input[name=plat]:checked').map((c) => c.value), when: $('#pWhen').value, status: $('#pStatus').value,
+  };
+  const all = plans().filter((p) => p.id !== item.id); all.push(item);
+  save('clipper.plan', all); pd.close(); renderPlans(); toast('Tersimpan');
+});
+pd.addEventListener('click', (e) => { if (e.target === pd) pd.close(); });
+
+/* ---------- halaman Panduan ---------- */
+const STEPS = [
+  { t: 'Pasang Termux', d: 'Unduh dari F-Droid, bukan Play Store. Di F-Droid: ketuk ikon kaca pembesar, cari "Termux", lalu Install.' },
+  { t: 'Perbarui paket', c: 'pkg update -y && pkg upgrade -y' },
+  { t: 'Pasang alat', c: 'pkg install -y python ffmpeg git' },
+  { t: 'Pasang yt-dlp', c: 'pip install yt-dlp' },
+  { t: 'Izinkan akses penyimpanan', c: 'termux-setup-storage', d: 'Ketuk Izinkan saat diminta.' },
+  { t: 'Unduh Clipper', c: 'git clone https://github.com/06051gmbdg-prog/Make-clipper-video' },
+  { t: 'Perbarui kapan saja', c: 'cd ~/Make-clipper-video && git pull', d: 'Jalankan setiap kali ada fitur baru di repo.' },
+];
+function renderSteps() {
+  const done = load('clipper.steps', {});
+  const box = $('#steps'); box.replaceChildren();
+  STEPS.forEach((s, i) => {
+    box.append(h('div', { class: 'step' },
+      h('input', { class: 'ck', type: 'checkbox', checked: !!done[i], 'aria-label': `Selesai: ${s.t}`, onchange: (e) => {
+        const d = load('clipper.steps', {}); d[i] = e.target.checked; save('clipper.steps', d); progress();
+      } }),
+      h('div', { style: 'min-width:0;flex:1' },
+        h('h3', {}, `${i + 1}. ${s.t}`), s.d ? h('p', {}, s.d) : null,
+        s.c ? h('div', { class: 'code' }, h('code', {}, s.c),
+          h('button', { class: 'btn sm', type: 'button', onclick: async () => toast((await copyText(s.c)) ? 'Disalin' : 'Gagal menyalin') }, 'Salin')) : null)));
+  });
+  progress();
+}
+function progress() {
+  const done = load('clipper.steps', {});
+  $('#prog').style.width = (STEPS.filter((_, i) => done[i]).length / STEPS.length * 100) + '%';
+}
+
+/* ---------- navigasi tab ---------- */
+const VIEWS = ['buat', 'jadwal', 'panduan'];
+function route() {
+  const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'buat';
+  VIEWS.forEach((n) => {
+    $('#view-' + n).hidden = n !== v;
+    const t = $('#tab-' + n);
+    if (n === v) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+  });
+  $('#actionbar').hidden = v !== 'buat';
+  window.scrollTo(0, 0);
+}
+addEventListener('hashchange', route);
+
+/* ---------- pasang sebagai aplikasi ---------- */
+let deferred = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; $('#installBtn').hidden = false; });
+$('#installBtn').addEventListener('click', async () => {
+  if (!deferred) return;
+  deferred.prompt(); await deferred.userChoice.catch(() => {});
+  deferred = null; $('#installBtn').hidden = true;
+});
+addEventListener('appinstalled', () => { $('#installBtn').hidden = true; });
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
+/* ---------- mulai ---------- */
+const o = load('clipper.opts', null);
+if (o) {
+  const radio = $(`input[name=mode][value="${o.mode}"]`); if (radio) radio.checked = true;
+  E.partLen.value = o.partLen || ''; E.optV.checked = o.vertical !== false; E.optS.checked = o.subtitle !== false;
+  if ([...E.lang.options].some((x) => x.value === o.lang)) E.lang.value = o.lang;
+  E.wm.value = o.watermark || ''; E.file.value = o.file || '';
+}
+addRow(); addRow();
+applyMode(); renderHist(); renderPlans(); renderSteps(); route(); render();
+})();
+</script>
+</body>
+</html>

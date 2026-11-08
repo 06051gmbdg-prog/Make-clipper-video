@@ -47,6 +47,18 @@ Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh
 | `--sub-lang` | Bahasa caption (default `id`, contoh `en`) |
 | `--watermark` | Teks watermark di bagian bawah |
 
+## Aplikasi (app.html)
+
+`app.html` adalah aplikasi web untuk HP: isi form, salin perintahnya, lalu tempel di Termux. Ada juga pencatat jadwal posting dan panduan pemasangan.
+
+- **Buat**: link YouTube, mode (satu klip, pecah otomatis, pilih sendiri), 9:16, subtitel, watermark, pratinjau, lalu perintah siap salin.
+- **Jadwal**: catatan caption, hashtag, platform, dan waktu posting. Tersimpan di HP.
+- **Panduan**: langkah pemasangan Termux dengan tombol salin dan daftar centang.
+
+Cara memasang di layar utama HP: buka `app.html` lewat alamat https (misalnya GitHub Pages: Settings, Pages, branch `main`), lalu di Chrome pilih **Pasang aplikasi** atau menu titik tiga, **Tambahkan ke layar utama**. Setelah itu bisa dibuka tanpa internet.
+
+Aplikasi ini hanya menyusun perintah. Pemotongan videonya tetap dijalankan `clipper.py` di Termux.
+
 ## Subtitel otomatis
 
 `--subtitle` memakai caption yang sudah ada di YouTube (buatan pemilik video atau otomatis), jadi **tidak butuh API key**.
