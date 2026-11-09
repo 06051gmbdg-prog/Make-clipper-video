@@ -11,6 +11,9 @@ Contoh:
     # Beberapa bagian dengan waktu bebas, tanpa crop 9:16
     python clipper.py "https://youtu.be/XXXX" --segments "0:10-0:40,2:00-2:45" --no-vertical
 
+    # Simpan hasilnya ke Google Drive lewat rclone (setup sekali, lihat README)
+    python clipper.py "https://youtu.be/XXXX" -s 1:30 -e 2:15 --upload gdrive:Clipper
+
 Kebutuhan: yt-dlp dan ffmpeg (dengan libass untuk subtitel) di PATH. Tidak butuh API key.
 Subtitel diambil dari caption YouTube (manual atau otomatis), jadi video harus punya caption.
 """
@@ -240,6 +243,33 @@ def fetch_subtitles(url: str, lang: str, workdir: str) -> str | None:
 
 # ---------------------------------------------------------------- video
 
+def upload_files(paths: list[str], remote: str) -> bool:
+    """Unggah file hasil ke Google Drive (atau penyimpanan lain) lewat rclone.
+
+    File lokal tidak dihapus. Kegagalan unggah tidak membatalkan klip yang sudah jadi.
+    """
+    if shutil.which("rclone") is None:
+        print("PERINGATAN: rclone belum terpasang, klip tidak diunggah.\n"
+              "Pasang dengan: pkg install rclone  (lalu: rclone config)")
+        return False
+    if ":" not in remote:
+        print(f"PERINGATAN: tujuan unggah '{remote}' tidak valid. Contoh: gdrive:Clipper")
+        return False
+    ok = True
+    for path in paths:
+        print(f"Mengunggah {os.path.basename(path)} -> {remote}")
+        try:
+            subprocess.run(["rclone", "copy", path, remote, "--progress"], check=True)
+        except (subprocess.CalledProcessError, OSError) as exc:
+            print(f"GAGAL mengunggah {path}: {exc}")
+            ok = False
+    if ok:
+        print("Unggah selesai.")
+    else:
+        print("Sebagian gagal diunggah. File tetap ada di HP; jalankan ulang rclone copy secara manual.")
+    return ok
+
+
 def check_tools():
     missing = [t for t in ("yt-dlp", "ffmpeg") if shutil.which(t) is None]
     if missing:
@@ -344,6 +374,8 @@ def main():
     p.add_argument("--sub-lang", default="id",
                    help="Bahasa caption (default id; contoh: en). Bisa hasil terjemahan otomatis YouTube")
     p.add_argument("--watermark", help="Teks watermark di bagian bawah")
+    p.add_argument("--upload", metavar="REMOTE:FOLDER",
+                   help="Unggah hasil ke Google Drive lewat rclone, contoh: gdrive:Clipper")
     args = p.parse_args()
 
     if args.segments:
@@ -380,6 +412,9 @@ def main():
                         build_filters(args.vertical, args.watermark),
                         cues=cues, vertical=args.vertical, workdir=tmp)
     print("\nSelesai:\n  " + "\n  ".join(names))
+    if args.upload:
+        print()
+        upload_files(names, args.upload)
 
 
 if __name__ == "__main__":

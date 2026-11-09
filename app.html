@@ -327,6 +327,15 @@ dialog h2{font-size:19px;margin-bottom:14px}
         <input id="file" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="clip.mp4">
         <p class="mu small" style="margin-top:6px">Disimpan ke folder Download HP. Kalau ada banyak bagian: <b>nama_part1.mp4</b>, <b>nama_part2.mp4</b>, …</p>
       </div>
+      <div class="opt">
+        <div><b>Simpan ke Google Drive</b><small>Otomatis diunggah setelah klip jadi. Perlu setup rclone sekali (lihat Panduan).</small></div>
+        <span class="sw"><input type="checkbox" id="optD" role="switch" aria-label="Simpan ke Google Drive"><i></i></span>
+      </div>
+      <div class="field" id="driveBox" style="margin-top:14px">
+        <label class="f" for="drive">Tujuan Drive</label>
+        <input id="drive" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="gdrive:Clipper">
+        <p class="mu small" style="margin-top:6px">Format <b>namaremote:folder</b>. Nama remote sesuai yang kamu buat di rclone.</p>
+      </div>
     </div>
 
     <div class="card">
@@ -537,6 +546,7 @@ function compute(st) {
     }
   }
 
+  if (st.drive && !/^[\w.-]+:.*$/.test(st.drive)) add('Tujuan Drive harus berbentuk namaremote:folder, contoh gdrive:Clipper.');
   const file = cleanFile(st.file);
   let cmd = null;
   if (!issues.length && segs.length) {
@@ -544,6 +554,7 @@ function compute(st) {
     if (!st.vertical) p.push('--no-vertical');
     if (st.subtitle) { p.push('--subtitle'); if (st.lang !== 'id') p.push('--sub-lang', st.lang); }
     if (st.watermark) p.push('--watermark', shq(st.watermark));
+    if (st.drive) p.push('--upload', shq(st.drive));
     cmd = p.join(' ');
   }
   return { issues, segs, cmd, file };
@@ -552,7 +563,7 @@ function compute(st) {
 /* ---------- halaman Buat ---------- */
 const E = {
   url: $('#url'), start: $('#start'), end: $('#end'), partLen: $('#partLen'), rows: $('#rows'),
-  optV: $('#optV'), optS: $('#optS'), lang: $('#lang'), wm: $('#wm'), file: $('#file'),
+  optV: $('#optV'), optD: $('#optD'), drive: $('#drive'), optS: $('#optS'), lang: $('#lang'), wm: $('#wm'), file: $('#file'),
 };
 const mode = () => $('input[name=mode]:checked').value;
 
@@ -563,6 +574,7 @@ function readState() {
     rows: $$('.seg-row').map((r) => ({ s: $('.s', r).value.trim(), e: $('.e', r).value.trim() })),
     vertical: E.optV.checked, subtitle: E.optS.checked, lang: E.lang.value,
     watermark: E.wm.value.trim(), file: E.file.value.trim(),
+    drive: E.optD.checked ? (E.drive.value.trim() || 'gdrive:Clipper') : '',
   };
 }
 
@@ -606,6 +618,7 @@ function render() {
 
   // opsi yang bergantung pada saklar
   $('#langBox').hidden = !st.subtitle;
+  $('#driveBox').hidden = !E.optD.checked;
   $('#ph').classList.toggle('land', !st.vertical);
   $('.cap', $('#ph')).hidden = !st.subtitle;
   $('#phWm').textContent = st.watermark;
@@ -633,7 +646,7 @@ function render() {
   $('#abTitle').textContent = r.cmd ? (n === 1 ? `1 klip · ${fmt(total)}` : `${n} bagian · ${fmt(total)}`) : 'Belum siap';
   $('#abSub').textContent = r.cmd ? 'Siap disalin ke Termux' : (r.issues[0] ? r.issues[0].m : 'Isi link dan waktu');
 
-  save('clipper.opts', { mode: st.mode, partLen: st.partLen, vertical: st.vertical, subtitle: st.subtitle, lang: st.lang, watermark: st.watermark, file: st.file });
+  save('clipper.opts', { mode: st.mode, partLen: st.partLen, vertical: st.vertical, subtitle: st.subtitle, lang: st.lang, watermark: st.watermark, file: st.file, optD: E.optD.checked, drive: E.drive.value.trim() });
 }
 
 function renderHist() {
@@ -730,6 +743,7 @@ const STEPS = [
   { t: 'Pasang yt-dlp', c: 'pip install yt-dlp' },
   { t: 'Izinkan akses penyimpanan', c: 'termux-setup-storage', d: 'Ketuk Izinkan saat diminta.' },
   { t: 'Unduh Clipper', c: 'git clone https://github.com/06051gmbdg-prog/Make-clipper-video' },
+  { t: 'Opsional: sambungkan Google Drive', c: 'pkg install -y rclone && rclone config', d: 'Pilih n (new remote), beri nama gdrive, pilih Google Drive, kosongkan client id dan secret, pilih scope 1 (akses penuh), lalu Enter sampai ditanya auto config. Jawab y, buka link di Chrome HP, masuk ke akunmu, dan izinkan. Setelah itu aktifkan "Simpan ke Google Drive" di tab Buat.' },
   { t: 'Perbarui kapan saja', c: 'cd ~/Make-clipper-video && git pull', d: 'Jalankan setiap kali ada fitur baru di repo.' },
 ];
 function renderSteps() {
@@ -786,6 +800,7 @@ if (o) {
   E.partLen.value = o.partLen || ''; E.optV.checked = o.vertical !== false; E.optS.checked = o.subtitle !== false;
   if ([...E.lang.options].some((x) => x.value === o.lang)) E.lang.value = o.lang;
   E.wm.value = o.watermark || ''; E.file.value = o.file || '';
+  E.optD.checked = !!o.optD; E.drive.value = o.drive || '';
 }
 addRow(); addRow();
 applyMode(); renderHist(); renderPlans(); renderSteps(); route(); render();

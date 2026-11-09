@@ -46,6 +46,7 @@ Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh
 | `--subtitle` | Tempel subtitel otomatis dari caption YouTube |
 | `--sub-lang` | Bahasa caption (default `id`, contoh `en`) |
 | `--watermark` | Teks watermark di bagian bawah |
+| `--upload` | Unggah hasil ke Google Drive lewat rclone, contoh `gdrive:Clipper` |
 
 ## Aplikasi (app.html)
 
@@ -58,6 +59,37 @@ Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh
 Cara memasang di layar utama HP: buka `app.html` lewat alamat https (misalnya GitHub Pages: Settings, Pages, branch `main`), lalu di Chrome pilih **Pasang aplikasi** atau menu titik tiga, **Tambahkan ke layar utama**. Setelah itu bisa dibuka tanpa internet.
 
 Aplikasi ini hanya menyusun perintah. Pemotongan videonya tetap dijalankan `clipper.py` di Termux.
+
+## Simpan otomatis ke Google Drive
+
+Tambahkan `--upload` dan hasil klip diunggah ke Drive setelah selesai (file di HP tetap ada). Memakai [rclone](https://rclone.org), gratis dan tanpa API key.
+
+**Setup sekali di Termux:**
+
+```bash
+pkg install -y rclone
+rclone config
+```
+
+1. Ketik `n` (new remote), beri nama `gdrive`.
+2. Pilih **Google Drive** dari daftar. Kosongkan client id dan secret.
+3. Scope: pilih `1` (akses penuh) atau `3` (hanya file yang dibuat rclone, lebih aman).
+4. Enter sampai ditanya *Use web browser to automatically authenticate?*, jawab `y`.
+5. Buka link yang muncul di Chrome HP, masuk ke akun Google, dan izinkan. Kembali ke Termux.
+
+**Pemakaian:**
+
+```bash
+python clipper.py "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --upload gdrive:Clipper
+```
+
+`gdrive:Clipper` artinya remote `gdrive`, folder `Clipper` (dibuat otomatis kalau belum ada). Kalau unggah gagal (sinyal putus, belum login), klip tetap ada di HP dan bisa diunggah ulang:
+
+```bash
+rclone copy ~/storage/downloads/clip.mp4 gdrive:Clipper
+```
+
+Di `app.html`, aktifkan saklar **Simpan ke Google Drive** dan perintahnya otomatis memuat `--upload`.
 
 ## Subtitel otomatis
 
