@@ -107,6 +107,8 @@ rclone config create gdrive drive scope=drive.file
 
 Buka link yang muncul di Chrome HP, masuk ke akun Google, lalu izinkan. Scope `drive.file` hanya memberi akses ke file buatan rclone, jadi isi Drive lainnya tidak tersentuh. Tes dengan `rclone lsd gdrive:`.
 
+> Kalau mau mengunggah ke **folder yang kamu buat sendiri** di Drive (lihat bagian link folder di bawah), pakai akses penuh: `rclone config create gdrive drive scope=drive`.
+
 **Pemakaian:**
 
 ```bash
@@ -118,6 +120,14 @@ clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --upload gdrive:Clipper
 ```bash
 rclone copy ~/storage/downloads/clip.mp4 gdrive:Clipper
 ```
+
+**Unggah ke folder Drive yang sudah ada:** tempel link foldernya langsung.
+
+```bash
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --upload "https://drive.google.com/drive/folders/ID_FOLDER"
+```
+
+Ini hanya bisa kalau rclone login dengan `scope=drive` (akses penuh). Dengan `drive.file`, rclone tidak bisa melihat folder buatan sendiri dan unggahan gagal; script akan menampilkan petunjuknya.
 
 Saat memakai `clip` mode tanya-jawab, pertanyaan unggah ke Drive muncul otomatis kalau rclone sudah tersambung.
 

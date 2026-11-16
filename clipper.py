@@ -434,7 +434,29 @@ def wizard() -> list[str] | None:
 
 # ---------------------------------------------------------------- video
 
-def upload_files(paths: list[str], remote: str) -> bool:
+DRIVE_FOLDER_RE = re.compile(r"drive\.google\.com/drive/(?:u/\d+/)?folders/([A-Za-z0-9_-]+)")
+
+
+def resolve_upload_target(target: str):
+    """Ubah tujuan unggah menjadi (remote, opsi_rclone), atau (None, []) bila tidak valid.
+
+    Menerima 'gdrive:Folder' maupun link folder Google Drive
+    (https://drive.google.com/drive/folders/ID).
+    """
+    target = target.strip()
+    m = DRIVE_FOLDER_RE.search(target)
+    if m:
+        remotes = rclone_remotes()
+        if not remotes:
+            return None, []
+        remote = "gdrive:" if "gdrive:" in remotes else remotes[0]
+        return remote, ["--drive-root-folder-id", m.group(1)]
+    if target.lower().startswith(("http://", "https://")) or ":" not in target:
+        return None, []
+    return target, []
+
+
+def upload_files(paths: list[str], target: str) -> bool:
     """Unggah file hasil ke Google Drive (atau penyimpanan lain) lewat rclone.
 
     File lokal tidak dihapus. Kegagalan unggah tidak membatalkan klip yang sudah jadi.
@@ -443,14 +465,17 @@ def upload_files(paths: list[str], remote: str) -> bool:
         print("PERINGATAN: rclone belum terpasang, klip tidak diunggah.\n"
               "Pasang dengan: pkg install rclone  (lalu: rclone config)")
         return False
-    if ":" not in remote:
-        print(f"PERINGATAN: tujuan unggah '{remote}' tidak valid. Contoh: gdrive:Clipper")
+    remote, extra = resolve_upload_target(target)
+    if remote is None:
+        print(f"PERINGATAN: tujuan unggah '{target}' tidak valid.\n"
+              "Pakai 'gdrive:Clipper' atau link folder Drive (https://drive.google.com/drive/folders/...),\n"
+              "dan pastikan Drive sudah tersambung: rclone config create gdrive drive scope=drive")
         return False
     ok = True
     for path in paths:
-        print(f"Mengunggah {os.path.basename(path)} -> {remote}")
+        print(f"Mengunggah {os.path.basename(path)} -> {target if extra else remote}")
         try:
-            subprocess.run(["rclone", "copy", path, remote, "--progress"], check=True)
+            subprocess.run(["rclone", "copy", path, remote, *extra, "--progress"], check=True)
         except (subprocess.CalledProcessError, OSError) as exc:
             print(f"GAGAL mengunggah {path}: {exc}")
             ok = False
@@ -458,6 +483,10 @@ def upload_files(paths: list[str], remote: str) -> bool:
         print("Unggah selesai.")
     else:
         print("Sebagian gagal diunggah. File tetap ada di HP; jalankan ulang rclone copy secara manual.")
+        if extra:
+            print("Folder Drive buatan sendiri tidak bisa diakses kalau login rclone memakai scope drive.file.\n"
+                  "Login ulang dengan akses penuh: rclone config delete gdrive && "
+                  "rclone config create gdrive drive scope=drive")
     return ok
 
 
