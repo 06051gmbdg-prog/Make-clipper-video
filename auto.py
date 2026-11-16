@@ -48,7 +48,7 @@ PROVIDERS = {
         "where": "https://console.anthropic.com (menu API keys)",
     },
 }
-DEFAULT_PROVIDER = os.environ.get("CLIPPER_PROVIDER", "gemini")
+DEFAULT_PROVIDER = os.environ.get("CLIPPER_PROVIDER", "lokal")  # lokal = tanpa API key
 API_URL = os.environ.get("CLIPPER_API_URL")  # untuk pengujian: timpa alamat API
 KEY_FILE = PROVIDERS["claude"]["key_file"]
 MAX_TRANSCRIPT_CHARS = 250_000
@@ -199,6 +199,78 @@ def call_ai(prompt: str, key: str, model: str, provider: str = "claude", max_tok
     return "".join(parts)
 
 
+# ---------------------------------------------------------------- mode lokal (tanpa API key)
+
+_KW = {
+    "hook": ("rahasia", "ternyata", "jangan", "kesalahan", "gratis", "cuan", "viral", "gila", "bahaya", "wajib",
+             "stop", "kenapa", "mengapa", "bagaimana", "caranya", "penting", "fakta", "bohong", "salah", "pertama",
+             "banyak orang", "tahukah", "pernah", "bayangkan"),
+    "edukasi": ("cara", "tips", "langkah", "belajar", "strategi", "kunci", "rumus", "contoh", "tutorial", "fungsi",
+                "ilmu", "pelajaran", "prinsip", "metode", "alasan", "artinya", "misalnya", "karena", "sehingga"),
+    "emosi": ("sedih", "bangkit", "gagal", "sukses", "takut", "bangga", "perjuangan", "mimpi", "hancur", "bahagia",
+              "menangis", "kecewa", "semangat", "percaya", "berani", "hidup", "keluarga", "bersyukur"),
+    "relevansi": ("ai", "bisnis", "online", "affiliate", "digital", "penghasilan", "jualan", "konten", "marketing",
+                  "uang", "otomatis", "teknologi", "usaha", "produk", "pelanggan", "income", "kerja"),
+}
+
+
+def _hits(words_text: list[str], kws) -> int:
+    joined = " " + " ".join(words_text).lower() + " "
+    return sum(joined.count(f" {k} ") for k in kws)
+
+
+def local_clips(words, n: int, minlen: float, maxlen: float) -> dict:
+    """Pemilih momen sederhana tanpa AI: cari awal kalimat lalu nilai tiap jendela dari kata kunci dan kepadatan bicara."""
+    def pause_before(i):  # ada jeda bicara sebelum kata ke-i (caption otomatis sering tanpa jeda)
+        return i == 0 or words[i][0] - words[i - 1][1] >= 0.4
+
+    # awal jendela: setiap jeda bicara, ditambah tiap 6 kata supaya tetap ada pilihan bila caption tanpa jeda
+    starts = [i for i in range(len(words)) if pause_before(i) or i % 6 == 0]
+    if len(starts) > 3000:
+        starts = starts[::len(starts) // 3000 + 1]
+    target = (minlen + maxlen) / 2
+    cands = []
+    for si in starts:
+        t0 = words[si][0]
+        # akhir jendela: utamakan jeda bicara, cadangan tiap 6 kata; durasi dekat target dan tidak melebihi maxlen
+        best, ei, bestp = None, None, False
+        for j in range(si + 1, len(words) + 1):
+            dur = words[j - 1][1] - t0
+            if dur > maxlen:
+                break
+            at_pause = j == len(words) or pause_before(j)
+            if dur >= minlen and (at_pause or j % 6 == 0):
+                better = (best is None or (at_pause and not bestp)
+                          or (at_pause == bestp and abs(dur - target) < abs(best - target)))
+                if better:
+                    best, ei, bestp = dur, j, at_pause
+        if ei is None:
+            continue
+        seg = words[si:ei]
+        texts = [w[2] for w in seg]
+        dur = seg[-1][1] - t0
+        per100 = 100 / max(len(texts), 1)
+        first = texts[:10]
+        hook = min(10, (1.5 if pause_before(si) else 0) + 2 + 2.5 * _hits(first, _KW["hook"]) + (3 if any(t.endswith("?") for t in first) else 0)
+                   + (2 if any(re.search(r"\d", t) for t in first) else 0))
+        edu = min(10, 2 + _hits(texts, _KW["edukasi"]) * per100 * 0.8)
+        viral = min(10, 2 + _hits(texts, _KW["hook"]) * per100 * 0.9)
+        emo = min(10, 2 + _hits(texts, _KW["emosi"]) * per100 * 1.2)
+        rel = min(10, 2 + _hits(texts, _KW["relevansi"]) * per100 * 1.0)
+        wps = len(texts) / dur
+        clarity = max(0, 10 - abs(wps - 2.8) * 3.5)
+        cands.append({
+            "start": str(int(t0)), "end": str(int(seg[-1][1] + 0.5)),
+            "title": " ".join(texts[:8]).capitalize(), "hook": " ".join(texts[:14]),
+            "caption": " ".join(texts[:16]) + "... Simak sampai habis, follow untuk tips lainnya!",
+            "hashtags": ["#shorts", "#reels", "#abidinai", "#edukasi", "#tips"],
+            "scores": {"hook": hook, "edukasi": edu, "viral": viral, "emosi": emo, "kejelasan": clarity, "relevansi": rel},
+            "reason": "Dipilih oleh aturan lokal (kata kunci dan kepadatan bicara), bukan AI. Cek isinya sebelum diposting.",
+        })
+    return {"clips": cands}
+
+
+
 def parse_json(text: str) -> dict:
     text = re.sub(r"```(?:json)?", "", text)
     a, b = text.find("{"), text.rfind("}")
@@ -313,8 +385,8 @@ def main(argv=None):
     p.add_argument("--min-len", type=float, default=30, help="Durasi klip minimal, detik (default 30)")
     p.add_argument("--max-len", type=float, default=60, help="Durasi klip maksimal, detik (default 60)")
     p.add_argument("--topic", default=DEFAULT_TOPIC, help="Gambaran audiens/tema agar AI menilai relevansi")
-    p.add_argument("--ai", dest="provider", choices=list(PROVIDERS), default=DEFAULT_PROVIDER,
-                   help="Penyedia AI: gemini (ada kuota gratis, bawaan) atau claude (berbayar)")
+    p.add_argument("--ai", dest="provider", choices=["lokal"] + list(PROVIDERS), default=DEFAULT_PROVIDER,
+                   help="lokal = tanpa API key (bawaan), gemini (kuota gratis), atau claude (berbayar)")
     p.add_argument("--model", default=os.environ.get("CLIPPER_MODEL"), help="Nama model (bawaan sesuai --ai)")
     p.add_argument("--sub-lang", default="id", help="Bahasa caption YouTube (default id; jika tidak ada dicoba en)")
     p.add_argument("--sub-style", choices=C.SUB_STYLES, default="pop", help="Gaya teks (default pop)")
@@ -326,7 +398,7 @@ def main(argv=None):
     p.add_argument("--plan-only", action="store_true", help="Hanya buat rencana (plan.json), jangan buat klip")
     p.add_argument("--from-plan", metavar="PLAN.JSON", help="Pakai plan.json yang sudah ada, lewati analisis AI")
     args = p.parse_args(argv)
-    args.model = args.model or PROVIDERS[args.provider]["model"]
+    args.model = args.model or (PROVIDERS[args.provider]["model"] if args.provider != "lokal" else "lokal")
 
     plan_in = None
     if args.from_plan:
@@ -369,13 +441,17 @@ def main(argv=None):
             if len(text) > MAX_TRANSCRIPT_CHARS:
                 print("PERINGATAN: transkrip sangat panjang, hanya bagian awal yang dianalisis.")
                 text = text[:MAX_TRANSCRIPT_CHARS]
-            key = load_api_key(args.provider)
-            print(f"Menganalisis {fmt_time(hi)} transkrip dengan {args.model}...")
-            try:
-                raw = parse_json(call_ai(build_prompt(text, args.clips, args.min_len, args.max_len, args.topic, hi),
-                                         key, args.model, args.provider))
-            except (RuntimeError, ValueError) as exc:
-                sys.exit(f"Analisis AI gagal: {exc}")
+            if args.provider == "lokal":
+                print(f"Memilih momen dari {fmt_time(hi)} transkrip dengan aturan lokal (tanpa API key)...")
+                raw = local_clips(words, args.clips, args.min_len, args.max_len)
+            else:
+                key = load_api_key(args.provider)
+                print(f"Menganalisis {fmt_time(hi)} transkrip dengan {args.model}...")
+                try:
+                    raw = parse_json(call_ai(build_prompt(text, args.clips, args.min_len, args.max_len, args.topic, hi),
+                                             key, args.model, args.provider))
+                except (RuntimeError, ValueError) as exc:
+                    sys.exit(f"Analisis AI gagal: {exc}")
             clips = normalize_clips(raw, args.clips, lo, hi, args.min_len, args.max_len)
             if not clips:
                 sys.exit("AI tidak menemukan momen yang memenuhi syarat. Coba lagi, atau longgarkan --min-len/--max-len.")
