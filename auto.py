@@ -3,7 +3,7 @@
 
 Alur (mode semi otomatis):
   1. Ambil caption YouTube sebagai transkrip (tanpa Whisper, ringan untuk HP).
-  2. Claude memilih momen terbaik dan memberi skor berbobot (hook, edukasi, viral, emosi,
+  2. AI (Gemini atau Claude) memilih momen terbaik dan memberi skor berbobot (hook, edukasi, viral, emosi,
      kejelasan, relevansi), plus judul, caption, dan hashtag.
   3. Kamu cek daftar momen dan pilih mana yang dibuat.
   4. Klip dibuat (9:16, subtitel, watermark), disimpan bersama jadwal.txt dan plan.json,
@@ -13,8 +13,9 @@ Pemakaian:
     clip ai "https://youtu.be/XXXX"
     clip ai "https://youtu.be/XXXX" -n 5 --topic "AI untuk bisnis kecil" --upload gdrive:Clipper
 
-Butuh API key Claude (berbayar per pemakaian). Simpan di ANTHROPIC_API_KEY atau biarkan
-program menyimpannya di ~/.config/clipper/anthropic_key. Jangan bagikan key ke siapa pun.
+Bawaan memakai Gemini (ada kuota gratis; key dari https://aistudio.google.com/apikey).
+Simpan di GEMINI_API_KEY atau biarkan program menyimpannya di ~/.config/clipper/gemini_key.
+Pakai --ai claude untuk Claude (ANTHROPIC_API_KEY, berbayar). Jangan bagikan key ke siapa pun.
 """
 import argparse
 import getpass
@@ -30,9 +31,26 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import clipper as C  # noqa: E402
 
-API_URL = os.environ.get("CLIPPER_API_URL", "https://api.anthropic.com/v1/messages")
-DEFAULT_MODEL = os.environ.get("CLIPPER_MODEL", "claude-sonnet-5-5")
-KEY_FILE = os.path.expanduser("~/.config/clipper/anthropic_key")
+# penyedia AI: gemini (ada kuota gratis) atau claude (berbayar per pemakaian)
+PROVIDERS = {
+    "gemini": {
+        "name": "Gemini", "model": "gemini-2.5-flash",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        "env": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+        "key_file": os.path.expanduser("~/.config/clipper/gemini_key"),
+        "where": "https://aistudio.google.com/apikey",
+    },
+    "claude": {
+        "name": "Claude", "model": "claude-sonnet-5-5",
+        "url": "https://api.anthropic.com/v1/messages",
+        "env": ("ANTHROPIC_API_KEY",),
+        "key_file": os.path.expanduser("~/.config/clipper/anthropic_key"),
+        "where": "https://console.anthropic.com (menu API keys)",
+    },
+}
+DEFAULT_PROVIDER = os.environ.get("CLIPPER_PROVIDER", "gemini")
+API_URL = os.environ.get("CLIPPER_API_URL")  # untuk pengujian: timpa alamat API
+KEY_FILE = PROVIDERS["claude"]["key_file"]
 MAX_TRANSCRIPT_CHARS = 250_000
 
 # bobot penilaian (sama dengan rencana ABIDIN AI CLIPPER)
@@ -68,29 +86,32 @@ def clean_key(raw: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]", "", raw)
 
 
-def load_api_key() -> str:
-    key = clean_key(os.environ.get("ANTHROPIC_API_KEY", ""))
-    if key:
-        return key
+def load_api_key(provider: str = "claude") -> str:
+    prov = PROVIDERS[provider]
+    key_file = prov["key_file"]
+    for var in prov["env"]:
+        key = clean_key(os.environ.get(var, ""))
+        if key:
+            return key
     try:
-        with open(KEY_FILE, encoding="utf-8") as f:
+        with open(key_file, encoding="utf-8") as f:
             key = clean_key(f.read())
     except OSError:
         key = ""
     if key:
         return key
     if not sys.stdin.isatty():
-        sys.exit("API key belum diatur. Isi variabel ANTHROPIC_API_KEY atau jalankan sekali secara interaktif.")
-    print("API key Claude belum tersimpan. Buat di https://console.anthropic.com (menu API keys).")
+        sys.exit(f"API key {prov['name']} belum diatur. Isi variabel {prov['env'][0]} atau jalankan sekali secara interaktif.")
+    print(f"API key {prov['name']} belum tersimpan. Buat di {prov['where']}.")
     key = clean_key(getpass.getpass("Tempel API key (tidak ditampilkan di layar): "))
     if not key:
         sys.exit("API key kosong.")
-    if C.ask_yn(f"Simpan key di HP ini ({KEY_FILE}, hanya bisa dibaca akunmu)?", True):
-        os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
-        fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    if C.ask_yn(f"Simpan key di HP ini ({key_file}, hanya bisa dibaca akunmu)?", True):
+        os.makedirs(os.path.dirname(key_file), exist_ok=True)
+        fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(key + "\n")
-        print("Tersimpan. Hapus kapan saja dengan: rm " + KEY_FILE)
+        print("Tersimpan. Hapus kapan saja dengan: rm " + key_file)
     return key
 
 
@@ -123,12 +144,21 @@ TRANSKRIP:
 {transcript}"""
 
 
-def call_claude(prompt: str, key: str, model: str, max_tokens: int = 4096) -> str:
-    body = json.dumps({"model": model, "max_tokens": max_tokens,
-                       "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
-    req = urllib.request.Request(API_URL, data=body, method="POST", headers={
-        "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json",
-        "user-agent": "abidin-ai-clipper/1.0"})
+def call_ai(prompt: str, key: str, model: str, provider: str = "claude", max_tokens: int = 8192) -> str:
+    prov = PROVIDERS[provider]
+    url = API_URL or prov["url"].format(model=model)
+    if provider == "gemini":
+        body = json.dumps({"contents": [{"parts": [{"text": prompt}]}],
+                           "generationConfig": {"responseMimeType": "application/json",
+                                                "temperature": 0.4, "maxOutputTokens": max_tokens}}).encode("utf-8")
+        headers = {"x-goog-api-key": key, "content-type": "application/json"}
+    else:
+        body = json.dumps({"model": model, "max_tokens": min(max_tokens, 4096),
+                           "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
+        headers = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+    headers["user-agent"] = "abidin-ai-clipper/1.0"
+    req = urllib.request.Request(url, data=body, method="POST", headers=headers)
+    name = prov["name"]
     try:
         with urllib.request.urlopen(req, timeout=240) as resp:
             data = json.load(resp)
@@ -140,22 +170,32 @@ def call_claude(prompt: str, key: str, model: str, max_tokens: int = 4096) -> st
             pass
         if not detail:
             detail = (f"(tanpa pesan dari server) {exc.reason}; ukuran permintaan {len(body)//1024} KB; "
-                      f"server={exc.headers.get('server', '?')}; request-id={exc.headers.get('request-id', '-')}")
+                      f"server={exc.headers.get('server', '?')}")
         low = detail.lower()
-        if exc.code == 400 and ("credit" in low or "balance" in low):
+        if exc.code in (400, 401, 403) and ("api key" in low or "api_key" in low or "x-api-key" in low):
+            hint = "API key salah atau sudah dicabut."
+        elif exc.code == 400 and ("credit" in low or "balance" in low):
             hint = "Saldo kredit API habis. Isi di console.anthropic.com, menu Plans & Billing."
         elif exc.code == 400:
             hint = "Permintaan ditolak; baca pesan di bawah."
         else:
-            hint = ""
-        hint = hint or {401: "API key salah atau sudah dicabut.", 403: "Key tidak punya izin untuk model/akses ini.",
-                404: "Nama model tidak ditemukan. Coba --model lain.", 429: "Terlalu banyak permintaan atau saldo/kuota habis."}.get(exc.code, "")
-        raise RuntimeError(f"API Claude menolak (HTTP {exc.code}). {hint}\n{detail}") from None
+            hint = {401: "API key salah atau sudah dicabut.", 403: "Key tidak punya izin untuk model/akses ini.",
+                    404: "Nama model tidak ditemukan. Coba --model lain.",
+                    429: "Kuota habis atau terlalu banyak permintaan. Tunggu beberapa menit lalu coba lagi."}.get(exc.code, "")
+        raise RuntimeError(f"API {name} menolak (HTTP {exc.code}). {hint}\n{detail}") from None
     except (urllib.error.URLError, TimeoutError) as exc:
-        raise RuntimeError(f"Tidak bisa menghubungi API Claude: {exc}") from None
-    parts = [b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"]
-    if not parts:
-        raise RuntimeError("Balasan API kosong.")
+        raise RuntimeError(f"Tidak bisa menghubungi API {name}: {exc}") from None
+    if provider == "gemini":
+        parts = [pt.get("text", "") for c in data.get("candidates", [])[:1]
+                 for pt in c.get("content", {}).get("parts", [])]
+        if not "".join(parts).strip():
+            why = (data.get("promptFeedback") or {}).get("blockReason") or \
+                  (data.get("candidates") or [{}])[0].get("finishReason", "")
+            raise RuntimeError(f"Balasan Gemini kosong ({why or 'tanpa alasan'}).")
+    else:
+        parts = [b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"]
+        if not parts:
+            raise RuntimeError("Balasan API kosong.")
     return "".join(parts)
 
 
@@ -273,7 +313,9 @@ def main(argv=None):
     p.add_argument("--min-len", type=float, default=30, help="Durasi klip minimal, detik (default 30)")
     p.add_argument("--max-len", type=float, default=60, help="Durasi klip maksimal, detik (default 60)")
     p.add_argument("--topic", default=DEFAULT_TOPIC, help="Gambaran audiens/tema agar AI menilai relevansi")
-    p.add_argument("--model", default=DEFAULT_MODEL, help=f"Model Claude (default {DEFAULT_MODEL})")
+    p.add_argument("--ai", dest="provider", choices=list(PROVIDERS), default=DEFAULT_PROVIDER,
+                   help="Penyedia AI: gemini (ada kuota gratis, bawaan) atau claude (berbayar)")
+    p.add_argument("--model", default=os.environ.get("CLIPPER_MODEL"), help="Nama model (bawaan sesuai --ai)")
     p.add_argument("--sub-lang", default="id", help="Bahasa caption YouTube (default id; jika tidak ada dicoba en)")
     p.add_argument("--sub-style", choices=C.SUB_STYLES, default="pop", help="Gaya teks (default pop)")
     p.add_argument("--no-subtitle", action="store_true", help="Buat klip tanpa subtitel")
@@ -284,6 +326,7 @@ def main(argv=None):
     p.add_argument("--plan-only", action="store_true", help="Hanya buat rencana (plan.json), jangan buat klip")
     p.add_argument("--from-plan", metavar="PLAN.JSON", help="Pakai plan.json yang sudah ada, lewati analisis AI")
     args = p.parse_args(argv)
+    args.model = args.model or PROVIDERS[args.provider]["model"]
 
     plan_in = None
     if args.from_plan:
@@ -326,10 +369,11 @@ def main(argv=None):
             if len(text) > MAX_TRANSCRIPT_CHARS:
                 print("PERINGATAN: transkrip sangat panjang, hanya bagian awal yang dianalisis.")
                 text = text[:MAX_TRANSCRIPT_CHARS]
-            key = load_api_key()
+            key = load_api_key(args.provider)
             print(f"Menganalisis {fmt_time(hi)} transkrip dengan {args.model}...")
             try:
-                raw = parse_json(call_claude(build_prompt(text, args.clips, args.min_len, args.max_len, args.topic, hi), key, args.model))
+                raw = parse_json(call_ai(build_prompt(text, args.clips, args.min_len, args.max_len, args.topic, hi),
+                                         key, args.model, args.provider))
             except (RuntimeError, ValueError) as exc:
                 sys.exit(f"Analisis AI gagal: {exc}")
             clips = normalize_clips(raw, args.clips, lo, hi, args.min_len, args.max_len)

@@ -133,7 +133,7 @@ Saat memakai `clip` mode tanya-jawab, pertanyaan unggah ke Drive muncul otomatis
 
 ## ABIDIN AI CLIPPER: AI memilih momen terbaik (`clip ai`)
 
-Tempel satu link video panjang, Claude membaca transkripnya, memilih momen terbaik, lalu klip 9:16 + subtitel + watermark dibuat otomatis. Cocok untuk alur semi-otomatis: hasil kamu tinjau dulu sebelum diposting.
+Tempel satu link video panjang, AI (Gemini atau Claude) membaca transkripnya, memilih momen terbaik, lalu klip 9:16 + subtitel + watermark dibuat otomatis. Cocok untuk alur semi-otomatis: hasil kamu tinjau dulu sebelum diposting.
 
 ```bash
 clip ai "https://youtu.be/XXXX" -n 5 --watermark "ABIDIN AI" --upload gdrive:Clipper
@@ -142,19 +142,20 @@ clip ai "https://youtu.be/XXXX" -n 5 --watermark "ABIDIN AI" --upload gdrive:Cli
 Yang dilakukan:
 
 1. Mengambil caption video (butuh caption, `--sub-lang id`, cadangan `en`).
-2. Claude memberi skor tiap kandidat: hook 25%, edukasi 20%, viral 20%, emosi 15%, kejelasan 10%, relevansi audiens 10%.
+2. AI memberi skor tiap kandidat: hook 25%, edukasi 20%, viral 20%, emosi 15%, kejelasan 10%, relevansi audiens 10%.
 3. Menampilkan rencana klip (judul, waktu, skor) dan meminta konfirmasi.
 4. Memotong 30-60 detik per klip, 9:16 1080x1920, subtitel gaya `pop`, watermark.
 5. Menyimpan `NN_judul.mp4`, `plan.json`, dan `jadwal.txt` (judul, caption, hashtag, link sumber + timestamp, skor). Unggah ke Drive kalau `--upload` diisi.
 
-**API key Claude** (berbayar sesuai pemakaian, ambil di [console.anthropic.com](https://console.anthropic.com)): isi `export ANTHROPIC_API_KEY=...` atau jalankan sekali dan tempel saat diminta; key disimpan di `~/.config/clipper/anthropic_key` (hanya bisa dibaca kamu). Jangan kirim key ke chat atau commit ke repo.
+**API key AI.** Bawaan memakai **Gemini**, yang punya kuota gratis. Buat key di [aistudio.google.com/apikey](https://aistudio.google.com/apikey), lalu jalankan `clip ai ...`, tempel saat diminta, dan jawab `y` untuk menyimpan di `~/.config/clipper/gemini_key` (hanya bisa dibaca kamu). Atau isi `export GEMINI_API_KEY=...`. Mau pakai Claude (berbayar per pemakaian)? Tambahkan `--ai claude` dan siapkan `ANTHROPIC_API_KEY`. Jangan kirim key ke chat atau commit ke repo.
 
 | Opsi | Fungsi |
 |---|---|
 | `-n`, `--clips` | Jumlah klip (default 5) |
 | `--min-len`, `--max-len` | Durasi klip dalam detik (default 30 dan 60) |
 | `--topic` | Fokus topik untuk penilaian relevansi |
-| `--model` | Model Claude (default `claude-sonnet-5-5`) |
+| `--ai` | `gemini` (bawaan, model `gemini-2.5-flash`) atau `claude` |
+| `--model` | Nama model lain untuk penyedia yang dipilih |
 | `--sub-style`, `--no-subtitle` | Gaya subtitel atau matikan |
 | `--watermark`, `--upload` | Seperti perintah biasa |
 | `--out` | Folder hasil (default `~/storage/downloads/ABIDIN_AI/ID_VIDEO`) |
