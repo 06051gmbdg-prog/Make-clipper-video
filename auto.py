@@ -34,7 +34,7 @@ import clipper as C  # noqa: E402
 # penyedia AI: gemini (ada kuota gratis) atau claude (berbayar per pemakaian)
 PROVIDERS = {
     "gemini": {
-        "name": "Gemini", "model": "gemini-2.5-flash",
+        "name": "Gemini", "model": "gemini-3.8-flash",
         "url": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         "env": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
         "key_file": os.path.expanduser("~/.config/clipper/gemini_key"),

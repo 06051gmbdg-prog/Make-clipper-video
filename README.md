@@ -154,7 +154,7 @@ Yang dilakukan:
 | `-n`, `--clips` | Jumlah klip (default 5) |
 | `--min-len`, `--max-len` | Durasi klip dalam detik (default 30 dan 60) |
 | `--topic` | Fokus topik untuk penilaian relevansi |
-| `--ai` | `gemini` (bawaan, model `gemini-2.5-flash`) atau `claude` |
+| `--ai` | `gemini` (bawaan, model `gemini-3.8-flash`) atau `claude` |
 | `--model` | Nama model lain untuk penyedia yang dipilih |
 | `--sub-style`, `--no-subtitle` | Gaya subtitel atau matikan |
 | `--watermark`, `--upload` | Seperti perintah biasa |
