@@ -1,39 +1,59 @@
 # Make-clipper-video
 
-Potong video YouTube berdasarkan waktu mulai dan selesai. Hasil default **rasio 9:16** (Shorts/Reels/TikTok), bisa dipecah jadi beberapa bagian, dan bisa diberi **subtitel otomatis**.
+Potong video YouTube jadi klip **9:16** (Shorts/Reels/TikTok): satu klip atau beberapa bagian, dengan **subtitel otomatis**, gaya teks beranimasi (**motion text**), watermark, dan unggah otomatis ke Google Drive. Tanpa API key.
 
-## Kebutuhan
+## Pasang
 
-- Python 3.10+
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp): `pip install yt-dlp`
-- [ffmpeg](https://ffmpeg.org/download.html) (harus ada di PATH; untuk subtitel perlu dukungan libass)
+Disarankan di HP Android lewat [Termux](https://f-droid.org/packages/com.termux/) (pasang dari F-Droid, bukan Play Store).
 
-## Cara pakai
+```bash
+# Unduh repo (pilih salah satu)
+git clone https://github.com/06051gmbdg-prog/Make-clipper-video
+gh repo clone 06051gmbdg-prog/Make-clipper-video      # kalau GitHub CLI sudah terpasang (pkg install gh)
+
+# Pasang semua kebutuhan dan buat perintah `clip`
+cd Make-clipper-video
+sh install.sh
+```
+
+`install.sh` memasang python, ffmpeg, git, rclone, dan yt-dlp, meminta izin penyimpanan, lalu membuat perintah **`clip`**. Di komputer biasa, pasang manual: Python 3.10+, [yt-dlp](https://github.com/yt-dlp/yt-dlp), dan [ffmpeg](https://ffmpeg.org/download.html) (dengan libass untuk subtitel).
+
+Perbarui kapan saja dengan `clip update`.
+
+## Cara tercepat: ketik `clip`
+
+```bash
+clip
+```
+
+Program menanyakan satu per satu: link, mode potong, waktu, rasio 9:16, subtitel dan gaya teks, watermark, unggah ke Drive, dan nama file. Hasil disimpan di folder Download HP.
+
+## Pakai dengan perintah
 
 ```bash
 # Potong menit 1:30 sampai 2:15
-python clipper.py "https://youtu.be/XXXX" --start 1:30 --end 2:15
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15
 
-# 9:16 (bawaan) + subtitel + watermark, simpan sebagai short.mp4
-python clipper.py "https://youtu.be/XXXX" -s 90 -e 135 --subtitle --watermark "@namakamu" -o short.mp4
+# 9:16 (bawaan) + subtitel + watermark
+clip "https://youtu.be/XXXX" -s 90 -e 135 --subtitle --watermark "@namakamu" -o short.mp4
 
 # Tetap rasio asli (tanpa crop 9:16)
-python clipper.py "https://youtu.be/XXXX" -s 90 -e 135 --no-vertical
+clip "https://youtu.be/XXXX" -s 90 -e 135 --no-vertical
 ```
 
-Format waktu: `SS`, `MM:SS`, atau `HH:MM:SS`.
+`clip` sama dengan `python clipper.py`. Format waktu: `SS`, `MM:SS`, atau `HH:MM:SS`.
 
 ### Beberapa bagian
 
 ```bash
 # Rentang 1:00-5:00 dipecah otomatis jadi bagian @ 60 detik
-python clipper.py "https://youtu.be/XXXX" -s 1:00 -e 5:00 --part-length 60 -o seri.mp4
+clip "https://youtu.be/XXXX" -s 1:00 -e 5:00 --part-length 60 -o seri.mp4
 
 # Beberapa rentang bebas (dipisah koma)
-python clipper.py "https://youtu.be/XXXX" --segments "0:10-0:40,2:00-2:45,5:10-5:50" -o highlight.mp4
+clip "https://youtu.be/XXXX" --segments "0:10-0:40,2:00-2:45,5:10-5:50" -o highlight.mp4
 ```
 
-Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh sekali untuk semua bagian. Tidak butuh API key.
+Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh sekali untuk semua bagian.
 
 | Opsi | Fungsi |
 |---|---|
@@ -44,43 +64,53 @@ Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh
 | `-o`, `--output` | Nama file hasil (default `clip.mp4`) |
 | `--vertical` / `--no-vertical` | Crop tengah ke 9:16 (1080x1920). Aktif secara bawaan |
 | `--subtitle` | Tempel subtitel otomatis dari caption YouTube |
+| `--sub-style` | Gaya teks: `klasik`, `pop`, atau `kata` (lihat di bawah) |
 | `--sub-lang` | Bahasa caption (default `id`, contoh `en`) |
 | `--watermark` | Teks watermark di bagian bawah |
 | `--upload` | Unggah hasil ke Google Drive lewat rclone, contoh `gdrive:Clipper` |
 
-## Aplikasi (app.html)
+## Gaya teks (motion text)
 
-`app.html` adalah aplikasi web untuk HP: isi form, salin perintahnya, lalu tempel di Termux. Ada juga pencatat jadwal posting dan panduan pemasangan.
+Dipakai bersama `--subtitle`. Pilih dengan `--sub-style`:
 
-- **Buat**: link YouTube, mode (satu klip, pecah otomatis, pilih sendiri), 9:16, subtitel, watermark, pratinjau, lalu perintah siap salin.
-- **Jadwal**: catatan caption, hashtag, platform, dan waktu posting. Tersimpan di HP.
-- **Panduan**: langkah pemasangan Termux dengan tombol salin dan daftar centang.
+| Gaya | Tampilan |
+|---|---|
+| `klasik` (bawaan) | Satu baris statis, putih dengan garis hitam. |
+| `pop` | Satu baris huruf besar; **kata yang sedang diucapkan menyala kuning** dan berpindah mengikuti suara. |
+| `kata` | **Satu kata besar** di tengah layar, muncul dengan efek zoom-in, ganti kata demi kata. |
 
-Cara memasang di layar utama HP: buka `app.html` lewat alamat https (misalnya GitHub Pages: Settings, Pages, branch `main`), lalu di Chrome pilih **Pasang aplikasi** atau menu titik tiga, **Tambahkan ke layar utama**. Setelah itu bisa dibuka tanpa internet.
+```bash
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --sub-style pop
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --sub-style kata
+```
 
-Aplikasi ini hanya menyusun perintah. Pemotongan videonya tetap dijalankan `clipper.py` di Termux.
+Di `clip` mode tanya-jawab dan di `app.html`, gaya ini tinggal dipilih. Waktu animasi mengikuti waktu kata dari caption YouTube, jadi ketepatannya sama dengan caption aslinya.
+
+## Subtitel otomatis
+
+`--subtitle` memakai caption yang sudah ada di YouTube (buatan pemilik video atau otomatis).
+
+- Video harus punya caption. Kalau tidak ada, klip tetap dibuat tanpa subtitel dan muncul peringatan.
+- `--sub-lang id` bisa menampilkan terjemahan otomatis YouTube untuk video berbahasa lain.
+- Teks dipecah jadi baris pendek (maks. 5 kata) dan diletakkan agak ke atas supaya tidak tertutup tombol aplikasi.
+- Kalau teks tidak muncul di Termux, kemungkinan ffmpeg-nya tanpa libass atau font belum tersedia.
 
 ## Simpan otomatis ke Google Drive
 
-Tambahkan `--upload` dan hasil klip diunggah ke Drive setelah selesai (file di HP tetap ada). Memakai [rclone](https://rclone.org), gratis dan tanpa API key.
+Tambahkan `--upload` dan hasil klip diunggah ke Drive setelah selesai (file di HP tetap ada). Memakai [rclone](https://rclone.org), gratis.
 
-**Setup sekali di Termux:**
+**Sambungkan sekali di Termux** (satu perintah, tanpa pertanyaan):
 
 ```bash
-pkg install -y rclone
-rclone config
+rclone config create gdrive drive scope=drive.file
 ```
 
-1. Ketik `n` (new remote), beri nama `gdrive`.
-2. Pilih **Google Drive** dari daftar. Kosongkan client id dan secret.
-3. Scope: pilih `1` (akses penuh) atau `3` (hanya file yang dibuat rclone, lebih aman).
-4. Enter sampai ditanya *Use web browser to automatically authenticate?*, jawab `y`.
-5. Buka link yang muncul di Chrome HP, masuk ke akun Google, dan izinkan. Kembali ke Termux.
+Buka link yang muncul di Chrome HP, masuk ke akun Google, lalu izinkan. Scope `drive.file` hanya memberi akses ke file buatan rclone, jadi isi Drive lainnya tidak tersentuh. Tes dengan `rclone lsd gdrive:`.
 
 **Pemakaian:**
 
 ```bash
-python clipper.py "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --upload gdrive:Clipper
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --upload gdrive:Clipper
 ```
 
 `gdrive:Clipper` artinya remote `gdrive`, folder `Clipper` (dibuat otomatis kalau belum ada). Kalau unggah gagal (sinyal putus, belum login), klip tetap ada di HP dan bisa diunggah ulang:
@@ -89,16 +119,19 @@ python clipper.py "https://youtu.be/XXXX" -s 1:30 -e 2:15 --subtitle --upload gd
 rclone copy ~/storage/downloads/clip.mp4 gdrive:Clipper
 ```
 
-Di `app.html`, aktifkan saklar **Simpan ke Google Drive** dan perintahnya otomatis memuat `--upload`.
+Saat memakai `clip` mode tanya-jawab, pertanyaan unggah ke Drive muncul otomatis kalau rclone sudah tersambung.
 
-## Subtitel otomatis
+## Aplikasi (app.html)
 
-`--subtitle` memakai caption yang sudah ada di YouTube (buatan pemilik video atau otomatis), jadi **tidak butuh API key**.
-Teks dipecah jadi baris pendek (maks. 5 kata) di bagian bawah layar, putih dengan garis hitam.
+`app.html` adalah aplikasi web untuk HP: isi form, salin perintahnya, lalu tempel di Termux. Ada juga pencatat jadwal posting dan panduan pemasangan.
 
-- Video harus punya caption. Kalau tidak ada, klip tetap dibuat tanpa subtitel dan muncul peringatan.
-- `--sub-lang id` bisa menampilkan terjemahan otomatis YouTube untuk video berbahasa lain.
-- Kalau teks tidak muncul di Termux, kemungkinan ffmpeg-nya tanpa libass atau font belum tersedia.
+- **Buat**: link YouTube, mode (satu klip, pecah otomatis, pilih sendiri), 9:16, subtitel dan gaya teks, watermark, Drive, pratinjau, lalu perintah siap salin.
+- **Jadwal**: catatan caption, hashtag, platform, dan waktu posting. Tersimpan di HP.
+- **Panduan**: langkah pemasangan Termux dengan tombol salin dan daftar centang.
+
+Cara memasang di layar utama HP: buka `app.html` lewat alamat https (misalnya GitHub Pages: Settings, Pages, branch `main`), lalu di Chrome pilih **Pasang aplikasi** atau menu titik tiga, **Tambahkan ke layar utama**. Setelah itu bisa dibuka tanpa internet.
+
+Aplikasi ini hanya menyusun perintah. Pemotongan videonya dijalankan `clipper.py` di Termux.
 
 ## Catatan
 

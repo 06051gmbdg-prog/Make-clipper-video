@@ -101,6 +101,8 @@ input::placeholder,textarea::placeholder{color:#6f7391}
   color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 0 3px #000,0 1px 2px #000;
 }
 .ph.land .cap{bottom:7%;font-size:6px}
+.ph .cap.kata{font-size:15px;bottom:26%}
+.ph.land .cap.kata{font-size:10px;bottom:12%}
 .ph .wm{position:absolute;left:0;right:0;bottom:3%;text-align:center;font-size:5.5px;font-weight:700;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
 .prev-info{min-width:0;flex:1}
 .prev-info b{display:block;font-size:17px}
@@ -317,6 +319,14 @@ dialog h2{font-size:19px;margin-bottom:14px}
           <option value="ja">Jepang</option>
           <option value="ko">Korea</option>
         </select>
+        <div style="margin-top:14px">
+          <label class="f" for="subStyle">Gaya teks</label>
+          <select id="subStyle">
+            <option value="klasik">Klasik (satu baris statis)</option>
+            <option value="pop">Pop (kata yang diucapkan menyala kuning)</option>
+            <option value="kata">Kata satu-satu (besar, efek zoom)</option>
+          </select>
+        </div>
       </div>
       <div class="field" style="margin-top:14px">
         <label class="f" for="wm">Watermark (opsional)</label>
@@ -552,7 +562,7 @@ function compute(st) {
   if (!issues.length && segs.length) {
     const p = ['cd ~/Make-clipper-video &&', 'python clipper.py', shq(st.url), ...args, '-o', `~/storage/downloads/${file}`];
     if (!st.vertical) p.push('--no-vertical');
-    if (st.subtitle) { p.push('--subtitle'); if (st.lang !== 'id') p.push('--sub-lang', st.lang); }
+    if (st.subtitle) { p.push('--subtitle'); if (st.lang !== 'id') p.push('--sub-lang', st.lang); if (st.subStyle !== 'klasik') p.push('--sub-style', st.subStyle); }
     if (st.watermark) p.push('--watermark', shq(st.watermark));
     if (st.drive) p.push('--upload', shq(st.drive));
     cmd = p.join(' ');
@@ -563,7 +573,7 @@ function compute(st) {
 /* ---------- halaman Buat ---------- */
 const E = {
   url: $('#url'), start: $('#start'), end: $('#end'), partLen: $('#partLen'), rows: $('#rows'),
-  optV: $('#optV'), optD: $('#optD'), drive: $('#drive'), optS: $('#optS'), lang: $('#lang'), wm: $('#wm'), file: $('#file'),
+  optV: $('#optV'), optD: $('#optD'), drive: $('#drive'), optS: $('#optS'), lang: $('#lang'), subStyle: $('#subStyle'), wm: $('#wm'), file: $('#file'),
 };
 const mode = () => $('input[name=mode]:checked').value;
 
@@ -572,7 +582,7 @@ function readState() {
     url: E.url.value.trim(), mode: mode(), start: E.start.value.trim(), end: E.end.value.trim(),
     partLen: E.partLen.value.trim(),
     rows: $$('.seg-row').map((r) => ({ s: $('.s', r).value.trim(), e: $('.e', r).value.trim() })),
-    vertical: E.optV.checked, subtitle: E.optS.checked, lang: E.lang.value,
+    vertical: E.optV.checked, subtitle: E.optS.checked, lang: E.lang.value, subStyle: E.subStyle.value,
     watermark: E.wm.value.trim(), file: E.file.value.trim(),
     drive: E.optD.checked ? (E.drive.value.trim() || 'gdrive:Clipper') : '',
   };
@@ -620,7 +630,13 @@ function render() {
   $('#langBox').hidden = !st.subtitle;
   $('#driveBox').hidden = !E.optD.checked;
   $('#ph').classList.toggle('land', !st.vertical);
-  $('.cap', $('#ph')).hidden = !st.subtitle;
+  const cap = $('.cap', $('#ph'));
+  cap.hidden = !st.subtitle;
+  cap.className = 'cap ' + st.subStyle;
+  cap.replaceChildren();
+  if (st.subStyle === 'pop') cap.append('HALO ', h('span', { style: 'color:#fbbf24' }, 'SEMUA'), ' SELAMAT');
+  else if (st.subStyle === 'kata') cap.append('SEMUA');
+  else cap.append('halo semua selamat datang');
   $('#phWm').textContent = st.watermark;
   $$('#partChips .chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.v === st.partLen)));
 
@@ -646,7 +662,7 @@ function render() {
   $('#abTitle').textContent = r.cmd ? (n === 1 ? `1 klip · ${fmt(total)}` : `${n} bagian · ${fmt(total)}`) : 'Belum siap';
   $('#abSub').textContent = r.cmd ? 'Siap disalin ke Termux' : (r.issues[0] ? r.issues[0].m : 'Isi link dan waktu');
 
-  save('clipper.opts', { mode: st.mode, partLen: st.partLen, vertical: st.vertical, subtitle: st.subtitle, lang: st.lang, watermark: st.watermark, file: st.file, optD: E.optD.checked, drive: E.drive.value.trim() });
+  save('clipper.opts', { mode: st.mode, partLen: st.partLen, vertical: st.vertical, subtitle: st.subtitle, lang: st.lang, subStyle: st.subStyle, watermark: st.watermark, file: st.file, optD: E.optD.checked, drive: E.drive.value.trim() });
 }
 
 function renderHist() {
@@ -738,13 +754,11 @@ pd.addEventListener('click', (e) => { if (e.target === pd) pd.close(); });
 /* ---------- halaman Panduan ---------- */
 const STEPS = [
   { t: 'Pasang Termux', d: 'Unduh dari F-Droid, bukan Play Store. Di F-Droid: ketuk ikon kaca pembesar, cari "Termux", lalu Install.' },
-  { t: 'Perbarui paket', c: 'pkg update -y && pkg upgrade -y' },
-  { t: 'Pasang alat', c: 'pkg install -y python ffmpeg git' },
-  { t: 'Pasang yt-dlp', c: 'pip install yt-dlp' },
-  { t: 'Izinkan akses penyimpanan', c: 'termux-setup-storage', d: 'Ketuk Izinkan saat diminta.' },
-  { t: 'Unduh Clipper', c: 'git clone https://github.com/06051gmbdg-prog/Make-clipper-video' },
-  { t: 'Opsional: sambungkan Google Drive', c: 'pkg install -y rclone && rclone config', d: 'Pilih n (new remote), beri nama gdrive, pilih Google Drive, kosongkan client id dan secret, pilih scope 1 (akses penuh), lalu Enter sampai ditanya auto config. Jawab y, buka link di Chrome HP, masuk ke akunmu, dan izinkan. Setelah itu aktifkan "Simpan ke Google Drive" di tab Buat.' },
-  { t: 'Perbarui kapan saja', c: 'cd ~/Make-clipper-video && git pull', d: 'Jalankan setiap kali ada fitur baru di repo.' },
+  { t: 'Unduh Clipper', c: 'pkg update -y && pkg install -y git && git clone https://github.com/06051gmbdg-prog/Make-clipper-video' },
+  { t: 'Pasang semuanya', c: 'cd ~/Make-clipper-video && sh install.sh', d: 'Memasang python, ffmpeg, yt-dlp, rclone, dan membuat perintah clip. Ketuk Izinkan saat diminta akses penyimpanan.' },
+  { t: 'Opsional: sambungkan Google Drive', c: 'rclone config create gdrive drive scope=drive.file', d: 'Buka link yang muncul di Chrome HP, masuk ke akun Google, lalu izinkan. Tes dengan: rclone lsd gdrive:' },
+  { t: 'Jalankan', c: 'clip', d: 'Ikuti pertanyaannya: link, waktu, gaya teks, dan Drive. Atau susun perintah lengkap di tab Buat lalu tempel.' },
+  { t: 'Perbarui kapan saja', c: 'clip update', d: 'Jalankan setiap kali ada fitur baru di repo.' },
 ];
 function renderSteps() {
   const done = load('clipper.steps', {});
@@ -799,6 +813,7 @@ if (o) {
   const radio = $(`input[name=mode][value="${o.mode}"]`); if (radio) radio.checked = true;
   E.partLen.value = o.partLen || ''; E.optV.checked = o.vertical !== false; E.optS.checked = o.subtitle !== false;
   if ([...E.lang.options].some((x) => x.value === o.lang)) E.lang.value = o.lang;
+  if ([...E.subStyle.options].some((x) => x.value === o.subStyle)) E.subStyle.value = o.subStyle;
   E.wm.value = o.watermark || ''; E.file.value = o.file || '';
   E.optD.checked = !!o.optD; E.drive.value = o.drive || '';
 }
