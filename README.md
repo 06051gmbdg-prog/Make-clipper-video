@@ -131,6 +131,43 @@ Ini hanya bisa kalau rclone login dengan `scope=drive` (akses penuh). Dengan `dr
 
 Saat memakai `clip` mode tanya-jawab, pertanyaan unggah ke Drive muncul otomatis kalau rclone sudah tersambung.
 
+## ABIDIN AI CLIPPER: AI memilih momen terbaik (`clip ai`)
+
+Tempel satu link video panjang, Claude membaca transkripnya, memilih momen terbaik, lalu klip 9:16 + subtitel + watermark dibuat otomatis. Cocok untuk alur semi-otomatis: hasil kamu tinjau dulu sebelum diposting.
+
+```bash
+clip ai "https://youtu.be/XXXX" -n 5 --watermark "ABIDIN AI" --upload gdrive:Clipper
+```
+
+Yang dilakukan:
+
+1. Mengambil caption video (butuh caption, `--sub-lang id`, cadangan `en`).
+2. Claude memberi skor tiap kandidat: hook 25%, edukasi 20%, viral 20%, emosi 15%, kejelasan 10%, relevansi audiens 10%.
+3. Menampilkan rencana klip (judul, waktu, skor) dan meminta konfirmasi.
+4. Memotong 30-60 detik per klip, 9:16 1080x1920, subtitel gaya `pop`, watermark.
+5. Menyimpan `NN_judul.mp4`, `plan.json`, dan `jadwal.txt` (judul, caption, hashtag, link sumber + timestamp, skor). Unggah ke Drive kalau `--upload` diisi.
+
+**API key Claude** (berbayar sesuai pemakaian, ambil di [console.anthropic.com](https://console.anthropic.com)): isi `export ANTHROPIC_API_KEY=...` atau jalankan sekali dan tempel saat diminta; key disimpan di `~/.config/clipper/anthropic_key` (hanya bisa dibaca kamu). Jangan kirim key ke chat atau commit ke repo.
+
+| Opsi | Fungsi |
+|---|---|
+| `-n`, `--clips` | Jumlah klip (default 5) |
+| `--min-len`, `--max-len` | Durasi klip dalam detik (default 30 dan 60) |
+| `--topic` | Fokus topik untuk penilaian relevansi |
+| `--model` | Model Claude (default `claude-sonnet-5-5`) |
+| `--sub-style`, `--no-subtitle` | Gaya subtitel atau matikan |
+| `--watermark`, `--upload` | Seperti perintah biasa |
+| `--out` | Folder hasil (default `~/storage/downloads/ABIDIN_AI/ID_VIDEO`) |
+| `--yes` | Lewati konfirmasi |
+| `--plan-only` | Hanya buat `plan.json`, belum memotong |
+| `--from-plan` | Potong dari `plan.json` yang sudah kamu edit |
+
+Alur tinjau dulu: `--plan-only`, ubah `plan.json` kalau perlu, lalu `--from-plan plan.json`.
+
+Belum termasuk: pencarian video otomatis (YouTube Data API), Whisper, auto reframing wajah, musik, posting ke Buffer, Notion, dan analitik. Jadwalkan `jadwal.txt` ke Buffer secara manual.
+
+Pakai hanya video milikmu atau yang boleh dipakai ulang, dan cantumkan kredit sumber (link ada di `jadwal.txt`).
+
 ## Aplikasi (app.html)
 
 `app.html` adalah aplikasi web untuk HP: isi form, salin perintahnya, lalu tempel di Termux. Ada juga pencatat jadwal posting dan panduan pemasangan.
