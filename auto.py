@@ -125,8 +125,21 @@ def call_claude(prompt: str, key: str, model: str, max_tokens: int = 4096) -> st
         with urllib.request.urlopen(req, timeout=240) as resp:
             data = json.load(resp)
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:400]
-        hint = {401: "API key salah atau sudah dicabut.", 403: "Key tidak punya izin untuk model/akses ini.",
+        detail = exc.read().decode("utf-8", "replace")[:600].strip()
+        try:
+            detail = json.loads(detail)["error"]["message"]
+        except Exception:
+            pass
+        if not detail:
+            detail = f"(tanpa pesan dari server) {exc.reason}"
+        low = detail.lower()
+        if exc.code == 400 and ("credit" in low or "balance" in low):
+            hint = "Saldo kredit API habis. Isi di console.anthropic.com, menu Plans & Billing."
+        elif exc.code == 400:
+            hint = "Permintaan ditolak; baca pesan di bawah."
+        else:
+            hint = ""
+        hint = hint or {401: "API key salah atau sudah dicabut.", 403: "Key tidak punya izin untuk model/akses ini.",
                 404: "Nama model tidak ditemukan. Coba --model lain.", 429: "Terlalu banyak permintaan atau saldo/kuota habis."}.get(exc.code, "")
         raise RuntimeError(f"API Claude menolak (HTTP {exc.code}). {hint}\n{detail}") from None
     except (urllib.error.URLError, TimeoutError) as exc:
