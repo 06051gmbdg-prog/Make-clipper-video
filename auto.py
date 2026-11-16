@@ -61,13 +61,20 @@ def slug(text: str) -> str:
 
 # ---------------------------------------------------------------- API key
 
+def clean_key(raw: str) -> str:
+    """Buang sisa karakter tempel (kode ESC, spasi, baris baru) yang bikin header ditolak."""
+    raw = re.sub(r"\x1b\[[0-9;?]*[A-Za-z~]", "", raw)
+    raw = re.sub(r"\[20[01]~", "", raw)
+    return re.sub(r"[^A-Za-z0-9_-]", "", raw)
+
+
 def load_api_key() -> str:
-    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    key = clean_key(os.environ.get("ANTHROPIC_API_KEY", ""))
     if key:
         return key
     try:
         with open(KEY_FILE, encoding="utf-8") as f:
-            key = f.read().strip()
+            key = clean_key(f.read())
     except OSError:
         key = ""
     if key:
@@ -75,7 +82,7 @@ def load_api_key() -> str:
     if not sys.stdin.isatty():
         sys.exit("API key belum diatur. Isi variabel ANTHROPIC_API_KEY atau jalankan sekali secara interaktif.")
     print("API key Claude belum tersimpan. Buat di https://console.anthropic.com (menu API keys).")
-    key = getpass.getpass("Tempel API key (tidak ditampilkan di layar): ").strip()
+    key = clean_key(getpass.getpass("Tempel API key (tidak ditampilkan di layar): "))
     if not key:
         sys.exit("API key kosong.")
     if C.ask_yn(f"Simpan key di HP ini ({KEY_FILE}, hanya bisa dibaca akunmu)?", True):
