@@ -120,7 +120,8 @@ def call_claude(prompt: str, key: str, model: str, max_tokens: int = 4096) -> st
     body = json.dumps({"model": model, "max_tokens": max_tokens,
                        "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
     req = urllib.request.Request(API_URL, data=body, method="POST", headers={
-        "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+        "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json",
+        "user-agent": "abidin-ai-clipper/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=240) as resp:
             data = json.load(resp)
@@ -131,7 +132,8 @@ def call_claude(prompt: str, key: str, model: str, max_tokens: int = 4096) -> st
         except Exception:
             pass
         if not detail:
-            detail = f"(tanpa pesan dari server) {exc.reason}"
+            detail = (f"(tanpa pesan dari server) {exc.reason}; ukuran permintaan {len(body)//1024} KB; "
+                      f"server={exc.headers.get('server', '?')}; request-id={exc.headers.get('request-id', '-')}")
         low = detail.lower()
         if exc.code == 400 and ("credit" in low or "balance" in low):
             hint = "Saldo kredit API habis. Isi di console.anthropic.com, menu Plans & Billing."
