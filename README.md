@@ -63,11 +63,25 @@ Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh
 | `--segments` | Beberapa rentang bebas, `MULAI-SELESAI,MULAI-SELESAI` |
 | `-o`, `--output` | Nama file hasil (default `clip.mp4`) |
 | `--vertical` / `--no-vertical` | Crop tengah ke 9:16 (1080x1920). Aktif secara bawaan |
+| `--reframe` | Crop 9:16 mengikuti pembicara (podcast/wawancara), tidak selalu di tengah |
 | `--subtitle` | Tempel subtitel otomatis dari caption YouTube |
 | `--sub-style` | Gaya teks: `klasik`, `pop`, atau `kata` (lihat di bawah) |
 | `--sub-lang` | Bahasa caption (default `id`, contoh `en`) |
 | `--watermark` | Teks watermark di bagian bawah |
 | `--upload` | Unggah hasil ke Google Drive lewat rclone, contoh `gdrive:Clipper` |
+
+## Podcast: crop mengikuti pembicara
+
+Crop 9:16 biasa selalu memotong bagian tengah, jadi pembicara di kiri atau kanan bisa terpotong. Dengan `--reframe`, kamera virtual bergeser ke orang yang sedang bicara dan berpindah halus saat gilirannya ganti.
+
+```bash
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --reframe --subtitle
+```
+
+- Mencari wajah kalau OpenCV terpasang, kalau tidak memakai gerakan terbesar di layar. Tanpa paket tambahan.
+- Cocok untuk kamera diam (podcast, wawancara). Video dengan banyak potongan kamera atau adegan bergerak lebih baik tanpa `--reframe`.
+- `clip ai` memakainya otomatis. Matikan dengan `--no-reframe`.
+- Di `clip` mode tanya-jawab, ada pertanyaan "Ikuti pembicara?".
 
 ## Gaya teks (motion text)
 
@@ -159,6 +173,7 @@ Yang dilakukan:
 | `--ai` | `lokal` (bawaan, tanpa key), `gemini` (model `gemini-3.8-flash`), atau `claude` |
 | `--model` | Nama model lain untuk penyedia yang dipilih |
 | `--sub-style`, `--no-subtitle` | Gaya subtitel atau matikan |
+| `--no-reframe` | Matikan crop yang mengikuti pembicara |
 | `--watermark`, `--upload` | Seperti perintah biasa |
 | `--out` | Folder hasil (default `~/storage/downloads/ABIDIN_AI/ID_VIDEO`) |
 | `--yes` | Lewati konfirmasi |

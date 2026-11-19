@@ -391,6 +391,7 @@ def main(argv=None):
     p.add_argument("--sub-lang", default="id", help="Bahasa caption YouTube (default id; jika tidak ada dicoba en)")
     p.add_argument("--sub-style", choices=C.SUB_STYLES, default="pop", help="Gaya teks (default pop)")
     p.add_argument("--no-subtitle", action="store_true", help="Buat klip tanpa subtitel")
+    p.add_argument("--no-reframe", action="store_true", help="Matikan fitur crop yang mengikuti pembicara (pakai crop tengah)")
     p.add_argument("--watermark", help="Teks watermark, contoh \"ABIDIN AI\"")
     p.add_argument("--upload", metavar="TUJUAN", help="Unggah hasil ke Drive, contoh gdrive:Clipper atau link folder")
     p.add_argument("--out", help="Folder hasil (default Download/ABIDIN_AI/<id video>)")
@@ -484,7 +485,8 @@ def main(argv=None):
             try:
                 raw_file = C.download_section(args.url, c["start"], c["end"], work)
                 C.render_segments(raw_file, c["start"], [(c["start"], c["end"])], [name], filters,
-                                  cues=cues, vertical=True, workdir=work, sub_style=args.sub_style)
+                                  cues=cues, vertical=True, workdir=work, sub_style=args.sub_style,
+                                  reframe=not args.no_reframe)
             except (SystemExit, Exception) as exc:  # satu klip gagal tidak menghentikan yang lain
                 print(f"GAGAL membuat klip {i}: {exc}")
                 continue

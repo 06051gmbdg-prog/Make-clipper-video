@@ -388,6 +388,8 @@ def wizard() -> list[str] | None:
         print()
         if not ask_yn("Rasio 9:16 (Shorts/Reels/TikTok)?", True):
             argv.append("--no-vertical")
+        elif ask_yn("Ikuti pembicara (podcast: crop bergeser ke orang yang bicara)?", False):
+            argv.append("--reframe")
         if ask_yn("Subtitel otomatis (dari caption YouTube)?", True):
             argv.append("--subtitle")
             lang = ask("Bahasa subtitel", "id")
@@ -562,10 +564,16 @@ def render(src: str, dst: str, offset: float, duration: float, filters: list[str
 def render_segments(src: str, base: float, segments: list[tuple[float, float]],
                     names: list[str], filters: list[str],
                     cues=None, vertical: bool = True, workdir: str | None = None,
-                    sub_style: str = "klasik"):
+                    sub_style: str = "klasik", reframe: bool = False):
     for i, ((s, e), name) in enumerate(zip(segments, names), start=1):
         print(f"\nMemproses bagian {i}/{len(segments)} ({s:.0f}s-{e:.0f}s) -> {name}")
         seg_filters = list(filters)
+        if reframe and vertical and seg_filters and seg_filters[0].startswith("crop="):
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import reframe as R
+            follow = R.crop_filter_for(src, s - base, e - s)
+            if follow:
+                seg_filters[0] = follow + ",scale=1080:1920"
         if cues:
             seg_cues = cues_for_segment(cues, s, e)
             if seg_cues:
@@ -601,6 +609,8 @@ def main():
                         "kata (satu kata besar dengan efek zoom)")
     p.add_argument("--sub-lang", default="id",
                    help="Bahasa caption (default id; contoh: en). Bisa hasil terjemahan otomatis YouTube")
+    p.add_argument("--reframe", action="store_true",
+                   help="Crop 9:16 mengikuti pembicara (podcast/wawancara), bukan selalu di tengah")
     p.add_argument("--watermark", help="Teks watermark di bagian bawah")
     p.add_argument("--upload", metavar="REMOTE:FOLDER",
                    help="Unggah hasil ke Google Drive lewat rclone, contoh: gdrive:Clipper")
@@ -644,7 +654,7 @@ def main():
         render_segments(raw, base, segments, names,
                         build_filters(args.vertical, args.watermark),
                         cues=cues, vertical=args.vertical, workdir=tmp,
-                        sub_style=args.sub_style)
+                        sub_style=args.sub_style, reframe=args.reframe)
     print("\nSelesai:\n  " + "\n  ".join(names))
     if args.upload:
         print()
