@@ -48,7 +48,7 @@ PROVIDERS = {
         "where": "https://console.anthropic.com (menu API keys)",
     },
 }
-DEFAULT_PROVIDER = os.environ.get("CLIPPER_PROVIDER", "lokal")  # lokal = tanpa API key
+DEFAULT_PROVIDER = os.environ.get("CLIPPER_PROVIDER", "claude")  # lokal = tanpa API key
 API_URL = os.environ.get("CLIPPER_API_URL")  # untuk pengujian: timpa alamat API
 KEY_FILE = PROVIDERS["claude"]["key_file"]
 MAX_TRANSCRIPT_CHARS = 250_000
@@ -386,7 +386,7 @@ def main(argv=None):
     p.add_argument("--max-len", type=float, default=60, help="Durasi klip maksimal, detik (default 60)")
     p.add_argument("--topic", default=DEFAULT_TOPIC, help="Gambaran audiens/tema agar AI menilai relevansi")
     p.add_argument("--ai", dest="provider", choices=["lokal"] + list(PROVIDERS), default=DEFAULT_PROVIDER,
-                   help="lokal = tanpa API key (bawaan), gemini (kuota gratis), atau claude (berbayar)")
+                   help="claude = Anthropic (bawaan), gemini, atau lokal = tanpa API key")
     p.add_argument("--model", default=os.environ.get("CLIPPER_MODEL"), help="Nama model (bawaan sesuai --ai)")
     p.add_argument("--sub-lang", default="id", help="Bahasa caption YouTube (default id; jika tidak ada dicoba en)")
     p.add_argument("--sub-style", choices=C.SUB_STYLES, default="pop", help="Gaya teks (default pop)")
