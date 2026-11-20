@@ -153,7 +153,7 @@ def call_ai(prompt: str, key: str, model: str, provider: str = "claude", max_tok
                                                 "temperature": 0.4, "maxOutputTokens": max_tokens}}).encode("utf-8")
         headers = {"x-goog-api-key": key, "content-type": "application/json"}
     else:
-        body = json.dumps({"model": model, "max_tokens": min(max_tokens, 4096),
+        body = json.dumps({"model": model, "max_tokens": max_tokens,
                            "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
         headers = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
     headers["user-agent"] = "abidin-ai-clipper/1.0"
@@ -195,7 +195,8 @@ def call_ai(prompt: str, key: str, model: str, provider: str = "claude", max_tok
     else:
         parts = [b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"]
         if not parts:
-            raise RuntimeError("Balasan API kosong.")
+            raise RuntimeError(f"Balasan API kosong (stop_reason={data.get('stop_reason')}). "
+                               "Model mungkin kehabisan token untuk berpikir; coba --model claude-sonnet-5-5.")
     return "".join(parts)
 
 
