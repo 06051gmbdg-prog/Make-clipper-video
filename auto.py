@@ -393,7 +393,7 @@ def main(argv=None):
     p.add_argument("--sub-style", choices=C.SUB_STYLES, default="pop", help="Gaya teks (default pop)")
     p.add_argument("--no-subtitle", action="store_true", help="Buat klip tanpa subtitel")
     p.add_argument("--no-reframe", action="store_true", help="Matikan fitur crop yang mengikuti pembicara (pakai crop tengah)")
-    p.add_argument("--watermark", help="Teks watermark, contoh \"ABIDIN AI\"")
+    p.add_argument("--watermark", help="Teks watermark, contoh \"@namakamu\" (bawaan: tanpa watermark)")
     p.add_argument("--upload", metavar="TUJUAN", help="Unggah hasil ke Drive, contoh gdrive:Clipper atau link folder")
     p.add_argument("--out", help="Folder hasil (default Download/ABIDIN_AI/<id video>)")
     p.add_argument("--yes", action="store_true", help="Lewati pengecekan, buat semua klip pilihan AI")

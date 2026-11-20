@@ -150,7 +150,7 @@ Saat memakai `clip` mode tanya-jawab, pertanyaan unggah ke Drive muncul otomatis
 Tempel satu link video panjang, lalu AI (Claude, atau Gemini, atau mode lokal tanpa key) memilih momen terbaik, lalu klip 9:16 + subtitel + watermark dibuat otomatis. Cocok untuk alur semi-otomatis: hasil kamu tinjau dulu sebelum diposting.
 
 ```bash
-clip ai "https://youtu.be/XXXX" -n 5 --watermark "ABIDIN AI" --upload gdrive:Clipper
+clip ai "https://youtu.be/XXXX" -n 5 --upload gdrive:Clipper
 ```
 
 Yang dilakukan:
