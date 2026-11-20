@@ -193,6 +193,46 @@ Belum termasuk: pencarian video otomatis (YouTube Data API), Whisper, auto refra
 
 Pakai hanya video milikmu atau yang boleh dipakai ulang, dan cantumkan kredit sumber (link ada di `jadwal.txt`).
 
+## Riset viral, jadwal Buffer, dan otomatis harian
+
+Tiga perintah tambahan melengkapi `clip ai`:
+
+```bash
+clip riset                       # cari video sumber untuk topik hari ini
+clip post FOLDER                 # jadwalkan klip hasil clip ai ke Buffer, 3x sehari
+clip harian --yes                # semuanya sekaligus: riset, klip, jadwal Buffer
+```
+
+**`clip riset`** meminta AI mengusulkan kata kunci YouTube sesuai tema harian (Senin AI & teknologi, Selasa affiliate, Rabu penghasilan online, Kamis motivasi & bisnis, Jumat edukasi digital, akhir pekan tren viral), lalu `yt-dlp` mencari videonya dan mengurutkan dengan jumlah penayangan nyata. Tanpa API key YouTube. AI bekerja dari pengetahuan modelnya, bukan data trending langsung, jadi hasilnya perlu kamu cek. Tanpa AI (`--ai lokal`) dipakai kata kunci bawaan. Kata kunci sendiri: `clip riset -q "podcast affiliate"`.
+
+**`clip post`** mengunggah tiap klip ke Google Drive (rclone, link publik), lalu membuat posting terjadwal di Buffer untuk Instagram Reels, Facebook Reels, dan YouTube Shorts. Satu klip per slot, slot bawaan 08:00, 12:00, dan 19:00 WIB. Klip terbaik mendapat slot paling awal, dan antreannya berlanjut dari jadwal terakhir.
+
+```bash
+export BUFFER_API_KEY="..."    # Buffer > Settings > API > buat key
+clip post ~/storage/downloads/ABIDIN_AI/ID_VIDEO --dry-run   # lihat jadwal dulu
+clip post ~/storage/downloads/ABIDIN_AI/ID_VIDEO             # kirim, dengan konfirmasi
+```
+
+Opsi: `--channels instagram,youtube`, `--slots 07:00,13:00,20:00`, `--drive gdrive:Clipper/Buffer`, `--no-credit`, `--yes`. ID channel diatur di `buffer_queue.py` (`CHANNELS`) atau lewat `--channel-id nama=ID`.
+
+**`clip harian`** menjalankan semuanya: riset, ambil 1 video sumber, 3 klip, jadwalkan. Video tanpa caption dilewati otomatis. Video yang sudah dipakai tidak diulang.
+
+Batas yang perlu kamu tahu:
+- Buffer gratis membatasi **10 posting terjadwal per channel**, jadi antrean hanya sekitar 3 hari ke depan. YouTube juga punya batas unggahan harian per channel.
+- Posting memakai link Drive publik. Video harus berukuran wajar (klip 30-60 detik cukup).
+- Kamu masih menjadi peninjau: tanpa `--yes` ada konfirmasi sebelum apa pun dikirim, dan semuanya bisa dihapus atau diedit di Buffer.
+- Pakai hanya video yang boleh dipakai ulang. Caption otomatis mencantumkan link sumber.
+
+**Jalankan terjadwal di Termux** (HP harus menyala dan Termux tidak dimatikan Android):
+
+```bash
+pkg install cronie termux-services
+termux-wake-lock
+crond
+crontab -e      # tambahkan baris di bawah, jalan tiap hari jam 02:00
+0 2 * * * cd ~/Make-clipper-video && python clipper.py harian --yes >> ~/harian.log 2>&1
+```
+
 ## Aplikasi (app.html)
 
 `app.html` adalah aplikasi web untuk HP: isi form, salin perintahnya, lalu tempel di Termux. Ada juga pencatat jadwal posting dan panduan pemasangan.

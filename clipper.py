@@ -586,10 +586,10 @@ def render_segments(src: str, base: float, segments: list[tuple[float, float]],
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "ai":   # clip ai LINK -> AI memilih momen terbaik
+    subcommands = {"ai": "auto", "riset": "riset", "post": "buffer_queue", "harian": "harian"}
+    if len(sys.argv) > 1 and sys.argv[1] in subcommands:   # clip ai / riset / post / harian
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import auto
-        sys.exit(auto.main(sys.argv[2:]))
+        sys.exit(__import__(subcommands[sys.argv[1]]).main(sys.argv[2:]))
     p = argparse.ArgumentParser(description="Potong video YouTube: multi-bagian, 9:16, subtitel.")
     p.add_argument("url", nargs="?", help="Link video YouTube (kosongkan untuk mode interaktif)")
     p.add_argument("-s", "--start", type=to_seconds, help="Waktu mulai (SS, MM:SS, HH:MM:SS)")
