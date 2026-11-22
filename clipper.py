@@ -247,8 +247,19 @@ def style_events(cues, style: str) -> list[tuple[float, float, str]]:
     return events
 
 
-def write_ass(cues, path: str, vertical: bool, style: str = "klasik"):
-    """Tulis subtitel ke file .ass (putih tebal dengan garis hitam)."""
+def hook_text(text: str, vertical: bool) -> str:
+    """Rapikan teks judul untuk ASS: potong jadi maksimal 3 baris pendek dan amankan karakter khusus."""
+    import textwrap
+    clean = re.sub(r"\s+", " ", text.replace("{", "(").replace("}", ")").replace("\\", "/")).strip()
+    lines = textwrap.wrap(clean, width=17 if vertical else 34)[:3]
+    if len(textwrap.wrap(clean, width=17 if vertical else 34)) > 3:
+        lines[-1] = lines[-1].rstrip(".,") + "..."
+    return "\\N".join(lines)
+
+
+def write_ass(cues, path: str, vertical: bool, style: str = "klasik",
+              hook: str | None = None, hook_secs: float = 4.0, length: float | None = None):
+    """Tulis subtitel dan/atau judul (hook) di layar ke file .ass."""
     if style not in SUB_STYLES:
         style = "klasik"
     if vertical:
@@ -271,12 +282,19 @@ def write_ass(cues, path: str, vertical: bool, style: str = "klasik"):
         "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
         f"Style: Default,Arial,{size},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,"
         f"-1,0,0,0,100,100,0,0,1,{outline},0,2,60,60,{margin_v},1",
+        # Judul/hook: teks hitam tebal di kotak kuning, di bagian atas layar
+        f"Style: Hook,Arial,{78 if vertical else 56},&H00000000,&H000000FF,&H0000D7FF,&H00000000,"
+        f"-1,0,0,0,100,100,0,0,3,{18 if vertical else 12},0,8,70,70,{250 if vertical else 60},1",
         "",
         "[Events]",
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
-    for s, e, text in style_events(cues, style):
+    for s, e, text in style_events(cues or [], style):
         lines.append(f"Dialogue: 0,{ass_time(s)},{ass_time(e)},Default,,0,0,0,,{text}")
+    if hook and hook.strip():
+        end = min(hook_secs, length) if (hook_secs and length) else (hook_secs or length or 4.0)
+        pop = r"{\fad(150,250)\fscx82\fscy82\t(0,220,\fscx100\fscy100)}"
+        lines.append(f"Dialogue: 1,{ass_time(0)},{ass_time(end)},Hook,,0,0,0,,{pop}{hook_text(hook, vertical)}")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
@@ -406,6 +424,9 @@ def wizard() -> list[str] | None:
         watermark = input("Watermark (Enter = tanpa): ").strip()
         if watermark:
             argv += ["--watermark", watermark]
+        hook = input("Judul/hook di layar, 4 detik pertama (Enter = tanpa): ").strip()
+        if hook:
+            argv += ["--hook", hook]
 
         remotes = rclone_remotes()
         if remotes:
@@ -564,7 +585,8 @@ def render(src: str, dst: str, offset: float, duration: float, filters: list[str
 def render_segments(src: str, base: float, segments: list[tuple[float, float]],
                     names: list[str], filters: list[str],
                     cues=None, vertical: bool = True, workdir: str | None = None,
-                    sub_style: str = "klasik", reframe: bool = False):
+                    sub_style: str = "klasik", reframe: bool = False,
+                    hook: str | None = None, hook_secs: float = 4.0):
     for i, ((s, e), name) in enumerate(zip(segments, names), start=1):
         print(f"\nMemproses bagian {i}/{len(segments)} ({s:.0f}s-{e:.0f}s) -> {name}")
         seg_filters = list(filters)
@@ -574,14 +596,13 @@ def render_segments(src: str, base: float, segments: list[tuple[float, float]],
             follow = R.crop_filter_for(src, s - base, e - s)
             if follow:
                 seg_filters[0] = follow + ",scale=1080:1920"
-        if cues:
-            seg_cues = cues_for_segment(cues, s, e)
-            if seg_cues:
-                ass_path = os.path.join(workdir or ".", f"sub{i}.ass")
-                write_ass(seg_cues, ass_path, vertical, sub_style)
-                seg_filters.append(ass_filter(ass_path))
-            else:
-                print("  (tidak ada ucapan di bagian ini, tanpa subtitel)")
+        seg_cues = cues_for_segment(cues, s, e) if cues else []
+        if cues and not seg_cues:
+            print("  (tidak ada ucapan di bagian ini, tanpa subtitel)")
+        if seg_cues or (hook and hook.strip()):
+            ass_path = os.path.join(workdir or ".", f"sub{i}.ass")
+            write_ass(seg_cues, ass_path, vertical, sub_style, hook=hook, hook_secs=hook_secs, length=e - s)
+            seg_filters.append(ass_filter(ass_path))
         render(src, name, s - base, e - s, seg_filters)
 
 
@@ -611,6 +632,8 @@ def main():
                    help="Bahasa caption (default id; contoh: en). Bisa hasil terjemahan otomatis YouTube")
     p.add_argument("--reframe", action="store_true",
                    help="Crop 9:16 mengikuti pembicara (podcast/wawancara), bukan selalu di tengah")
+    p.add_argument("--hook", help='Judul/hook di layar bagian atas, contoh "Jangan lakukan ini!"')
+    p.add_argument("--hook-secs", type=float, default=4.0, help="Lama judul tampil, detik (default 4; 0 = sepanjang klip)")
     p.add_argument("--watermark", help="Teks watermark di bagian bawah")
     p.add_argument("--upload", metavar="REMOTE:FOLDER",
                    help="Unggah hasil ke Google Drive lewat rclone, contoh: gdrive:Clipper")
@@ -654,7 +677,8 @@ def main():
         render_segments(raw, base, segments, names,
                         build_filters(args.vertical, args.watermark),
                         cues=cues, vertical=args.vertical, workdir=tmp,
-                        sub_style=args.sub_style, reframe=args.reframe)
+                        sub_style=args.sub_style, reframe=args.reframe,
+                        hook=args.hook, hook_secs=args.hook_secs)
     print("\nSelesai:\n  " + "\n  ".join(names))
     if args.upload:
         print()

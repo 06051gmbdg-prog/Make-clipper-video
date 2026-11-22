@@ -67,6 +67,8 @@ Hasilnya `seri_part1.mp4`, `seri_part2.mp4`, dan seterusnya. Video hanya diunduh
 | `--subtitle` | Tempel subtitel otomatis dari caption YouTube |
 | `--sub-style` | Gaya teks: `klasik`, `pop`, atau `kata` (lihat di bawah) |
 | `--sub-lang` | Bahasa caption (default `id`, contoh `en`) |
+| `--hook` | Judul/hook di layar bagian atas (kotak kuning), contoh `"Jangan lakukan ini!"` |
+| `--hook-secs` | Lama judul tampil, detik (default 4, `0` = sepanjang klip) |
 | `--watermark` | Teks watermark di bagian bawah |
 | `--upload` | Unggah hasil ke Google Drive lewat rclone, contoh `gdrive:Clipper` |
 
@@ -82,6 +84,16 @@ clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --reframe --subtitle
 - Cocok untuk kamera diam (podcast, wawancara). Video dengan banyak potongan kamera atau adegan bergerak lebih baik tanpa `--reframe`.
 - `clip ai` memakainya otomatis. Matikan dengan `--no-reframe`.
 - Di `clip` mode tanya-jawab, ada pertanyaan "Ikuti pembicara?".
+
+## Judul / hook di layar
+
+Teks besar hitam di kotak kuning pada bagian atas layar, muncul dengan efek pop dan memudar setelah 4 detik. Gunanya menahan penonton di 3 detik pertama.
+
+```bash
+clip "https://youtu.be/XXXX" -s 1:30 -e 2:15 --hook "Kesalahan fatal pemula affiliate" --subtitle
+```
+
+Teks otomatis dibungkus maksimal 3 baris. Di `clip ai`, AI menulis judul pancingan (maks. 8 kata) untuk tiap klip dan langsung dipasang; matikan dengan `--no-judul`, atur lamanya dengan `--judul-detik`. Judul tersimpan di `plan.json` (kolom `judul_layar`), jadi bisa kamu ganti lalu jalankan `--from-plan`. Di `clip` mode tanya-jawab ada pertanyaan judul.
 
 ## Gaya teks (motion text)
 
@@ -181,6 +193,7 @@ Pilihan lain: `--ai gemini` (kuota gratis, key dari [aistudio.google.com/apikey]
 | `--model` | Nama model lain untuk penyedia yang dipilih |
 | `--sub-style`, `--no-subtitle` | Gaya subtitel atau matikan |
 | `--no-reframe` | Matikan crop yang mengikuti pembicara |
+| `--no-judul`, `--judul-detik` | Matikan judul di layar, atau atur lama tampilnya |
 | `--watermark`, `--upload` | Seperti perintah biasa |
 | `--out` | Folder hasil (default `~/storage/downloads/ABIDIN_AI/ID_VIDEO`) |
 | `--yes` | Lewati konfirmasi |

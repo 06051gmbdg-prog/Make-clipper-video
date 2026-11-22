@@ -136,9 +136,10 @@ Aturan:
 - Beri skor 0-10 untuk tiap kriteria: hook (3 detik pertama), edukasi, viral, emosi (emosi/storytelling), kejelasan (kejelasan bicara), relevansi (relevansi audiens).
 - Jangan mengarang isi: judul, hook, dan caption harus sesuai ucapan di momen itu. Tulis dalam Bahasa Indonesia.
 - caption: 1-3 kalimat, diakhiri ajakan (CTA) singkat. hashtags: 4-6 hashtag.
+- judul_layar: teks pancingan untuk ditampilkan besar di layar 4 detik pertama, maksimal 8 kata, menimbulkan rasa penasaran tanpa menyesatkan (contoh: "Kesalahan Fatal Pemula Affiliate").
 
 Balas HANYA dengan JSON valid tanpa teks lain, dengan bentuk:
-{{"clips":[{{"start":"m:ss","end":"m:ss","title":"...","hook":"kalimat pembuka klip","caption":"...","hashtags":["#a","#b"],"scores":{{"hook":0,"edukasi":0,"viral":0,"emosi":0,"kejelasan":0,"relevansi":0}},"reason":"alasan singkat"}}]}}
+{{"clips":[{{"start":"m:ss","end":"m:ss","title":"...","hook":"kalimat pembuka klip","judul_layar":"maks 8 kata","caption":"...","hashtags":["#a","#b"],"scores":{{"hook":0,"edukasi":0,"viral":0,"emosi":0,"kejelasan":0,"relevansi":0}},"reason":"alasan singkat"}}]}}
 
 TRANSKRIP:
 {transcript}"""
@@ -263,6 +264,7 @@ def local_clips(words, n: int, minlen: float, maxlen: float) -> dict:
         cands.append({
             "start": str(int(t0)), "end": str(int(seg[-1][1] + 0.5)),
             "title": " ".join(texts[:8]).capitalize(), "hook": " ".join(texts[:14]),
+            "judul_layar": " ".join(texts[:7]).capitalize(),
             "caption": " ".join(texts[:16]) + "... Simak sampai habis, follow untuk tips lainnya!",
             "hashtags": ["#shorts", "#reels", "#abidinai", "#edukasi", "#tips"],
             "scores": {"hook": hook, "edukasi": edu, "viral": viral, "emosi": emo, "kejelasan": clarity, "relevansi": rel},
@@ -313,6 +315,7 @@ def normalize_clips(raw: dict, n: int, lo: float, hi: float, minlen: float, maxl
             "start": s, "end": e,
             "title": str(c.get("title") or "Klip").strip()[:100],
             "hook": str(c.get("hook") or "").strip()[:200],
+            "judul_layar": str(c.get("judul_layar") or "").strip()[:80],
             "caption": str(c.get("caption") or "").strip()[:600],
             "hashtags": tags[:8],
             "scores": scores,
@@ -392,6 +395,8 @@ def main(argv=None):
     p.add_argument("--sub-lang", default="id", help="Bahasa caption YouTube (default id; jika tidak ada dicoba en)")
     p.add_argument("--sub-style", choices=C.SUB_STYLES, default="pop", help="Gaya teks (default pop)")
     p.add_argument("--no-subtitle", action="store_true", help="Buat klip tanpa subtitel")
+    p.add_argument("--no-judul", action="store_true", help="Jangan tampilkan judul/hook di layar")
+    p.add_argument("--judul-detik", type=float, default=4.0, help="Lama judul tampil, detik (default 4)")
     p.add_argument("--no-reframe", action="store_true", help="Matikan fitur crop yang mengikuti pembicara (pakai crop tengah)")
     p.add_argument("--watermark", help="Teks watermark, contoh \"@namakamu\" (bawaan: tanpa watermark)")
     p.add_argument("--upload", metavar="TUJUAN", help="Unggah hasil ke Drive, contoh gdrive:Clipper atau link folder")
@@ -487,7 +492,9 @@ def main(argv=None):
                 raw_file = C.download_section(args.url, c["start"], c["end"], work)
                 C.render_segments(raw_file, c["start"], [(c["start"], c["end"])], [name], filters,
                                   cues=cues, vertical=True, workdir=work, sub_style=args.sub_style,
-                                  reframe=not args.no_reframe)
+                                  reframe=not args.no_reframe,
+                                  hook=None if args.no_judul else (c.get("judul_layar") or c["title"]),
+                                  hook_secs=args.judul_detik)
             except (SystemExit, Exception) as exc:  # satu klip gagal tidak menghentikan yang lain
                 print(f"GAGAL membuat klip {i}: {exc}")
                 continue
