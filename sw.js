@@ -1,6 +1,6 @@
 // Service worker: aplikasi tetap bisa dibuka tanpa internet.
 // Strategi: ambil dari jaringan dulu (supaya pembaruan langsung muncul), cadangan dari cache.
-const CACHE = 'clipper-v1';
+const CACHE = 'clipper-v2';
 const SHELL = [
   './app.html',
   './manifest.webmanifest',

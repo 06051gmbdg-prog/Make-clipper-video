@@ -250,6 +250,8 @@ crontab -e      # tambahkan baris di bawah, jalan tiap hari jam 02:00
 
 `app.html` adalah aplikasi web untuk HP: isi form, salin perintahnya, lalu tempel di Termux. Ada juga pencatat jadwal posting dan panduan pemasangan.
 
+Tab **AI** menyusun perintah `clip ai`, `clip harian`, `clip riset`, dan `clip post` (penyedia AI, jumlah klip, durasi, judul di layar, ikuti pembicara, Drive, channel dan jam Buffer). Aplikasi hanya menyusun perintah; API key tidak pernah dimasukkan ke aplikasi, tetap di Termux.
+
 - **Buat**: link YouTube, mode (satu klip, pecah otomatis, pilih sendiri), 9:16, subtitel dan gaya teks, watermark, Drive, pratinjau, lalu perintah siap salin.
 - **Jadwal**: catatan caption, hashtag, platform, dan waktu posting. Tersimpan di HP.
 - **Panduan**: langkah pemasangan Termux dengan tombol salin dan daftar centang.

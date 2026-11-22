@@ -159,7 +159,7 @@ details p,details .body{margin-top:8px;color:var(--mu);font-size:14.5px}
 .actionbar b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .actionbar small{color:var(--mu);font-size:12.5px}
 .tabs{
-  position:fixed;z-index:40;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);
+  position:fixed;z-index:40;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);
   height:calc(var(--tab) + var(--safe-b));padding-bottom:var(--safe-b);
   background:rgba(11,11,20,.94);border-top:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
 }
@@ -206,6 +206,14 @@ dialog h2{font-size:19px;margin-bottom:14px}
 .dfoot{display:flex;gap:10px;margin-top:18px}
 .dfoot .btn{flex:1}
 
+/* ai */
+.seg.s4{grid-template-columns:repeat(2,1fr)}
+.seg.s4 span{font-size:13px}
+.note{font-size:13px;color:var(--mu);margin-top:10px}
+.cmdrow{display:flex;gap:10px;margin-top:12px}
+.cmdrow .btn{flex:1}
+.hint{display:inline-block;font-size:12px;font-weight:700;color:var(--hi);border:1px solid rgba(251,191,36,.45);border-radius:99px;padding:2px 10px;margin-bottom:10px}
+
 /* panduan */
 .step{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
 .step:first-of-type{border-top:0;padding-top:0}
@@ -228,6 +236,7 @@ dialog h2{font-size:19px;margin-bottom:14px}
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
   <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 </svg>
 
@@ -361,6 +370,107 @@ dialog h2{font-size:19px;margin-bottom:14px}
     </div>
   </section>
 
+  <!-- ====================== AI ====================== -->
+  <section id="view-ai" class="view" aria-label="Klip otomatis dengan AI" hidden>
+    <div class="vh"><h1>Klip dengan AI</h1></div>
+    <p class="mu small">AI memilih momen 30–60 detik, membuat klip 9:16 dengan subtitel dan judul di layar. Aplikasi ini hanya menyusun perintah; Termux yang menjalankannya.</p>
+
+    <div class="card">
+      <div class="seg s4" role="radiogroup" aria-label="Jenis perintah AI">
+        <label><input type="radio" name="aimode" value="ai" checked><span>Dari link</span></label>
+        <label><input type="radio" name="aimode" value="harian"><span>Otomatis harian</span></label>
+        <label><input type="radio" name="aimode" value="riset"><span>Cari sumber</span></label>
+        <label><input type="radio" name="aimode" value="post"><span>Kirim ke Buffer</span></label>
+      </div>
+      <p class="note" id="aiDesc" style="margin:0"></p>
+    </div>
+
+    <div class="card" data-ai="ai">
+      <label class="f" for="aiUrl">Link YouTube</label>
+      <div class="inline">
+        <input id="aiUrl" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://youtu.be/…">
+        <button class="btn" id="aiPaste" type="button">Tempel</button>
+      </div>
+    </div>
+
+    <div class="card" data-ai="post">
+      <label class="f" for="aiFolder">Folder hasil klip</label>
+      <input id="aiFolder" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="~/storage/downloads/ABIDIN_AI/xVeQqC6DJ4s">
+      <p class="note">Folder yang berisi <b>plan.json</b> dari <b>clip ai</b>.</p>
+    </div>
+
+    <div class="card" data-ai="harian riset">
+      <div class="field"><label class="f" for="aiNiche">Tema (kosongkan = tema hari ini)</label>
+        <input id="aiNiche" type="text" autocomplete="off" placeholder="Affiliate marketing"></div>
+      <div class="field"><label class="f" for="aiQuery">Kata kunci sendiri (opsional)</label>
+        <input id="aiQuery" type="text" autocomplete="off" placeholder="podcast bisnis online indonesia"></div>
+      <div class="field"><label class="f" for="aiViews">Penayangan minimal</label>
+        <select id="aiViews"><option value="20000">20.000 (bawaan)</option><option value="5000">5.000</option><option value="100000">100.000</option></select></div>
+    </div>
+
+    <div class="card" data-ai="ai harian">
+      <h2>Klip</h2>
+      <div class="row field">
+        <div><label class="f" for="aiN">Jumlah klip</label><input id="aiN" type="text" inputmode="numeric" value="3"></div>
+        <div data-ai="harian"><label class="f" for="aiSrc">Video sumber</label><input id="aiSrc" type="text" inputmode="numeric" value="1"></div>
+      </div>
+      <div class="row field">
+        <div><label class="f" for="aiMin">Min (detik)</label><input id="aiMin" type="text" inputmode="numeric" value="30"></div>
+        <div><label class="f" for="aiMax">Maks (detik)</label><input id="aiMax" type="text" inputmode="numeric" value="60"></div>
+      </div>
+      <div class="field"><label class="f" for="aiStyle">Gaya teks</label>
+        <select id="aiStyle"><option value="pop">Pop (kata menyala kuning)</option><option value="klasik">Klasik</option><option value="kata">Kata satu-satu</option></select></div>
+      <div class="opt"><div><b>Judul di layar</b><small>Hook singkat di 4 detik pertama.</small></div>
+        <span class="sw"><input type="checkbox" id="aiJudul" role="switch" aria-label="Judul di layar" checked><i></i></span></div>
+      <div class="opt"><div><b>Ikuti pembicara</b><small>Crop 9:16 bergeser ke orang yang bicara (podcast).</small></div>
+        <span class="sw"><input type="checkbox" id="aiReframe" role="switch" aria-label="Ikuti pembicara" checked><i></i></span></div>
+      <div class="field" style="margin-top:14px"><label class="f" for="aiWm">Watermark (kosong = tanpa watermark)</label>
+        <input id="aiWm" type="text" autocomplete="off" placeholder="@namakamu"></div>
+    </div>
+
+    <div class="card" data-ai="ai harian riset">
+      <h2>AI</h2>
+      <label class="f" for="aiProv">Penyedia AI</label>
+      <select id="aiProv">
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="lokal">Lokal (tanpa API key, kurang pintar)</option>
+      </select>
+      <p class="note">Key disimpan di Termux (<b>~/.config/clipper/</b>), tidak pernah di aplikasi ini.</p>
+    </div>
+
+    <div class="card" data-ai="ai">
+      <div class="opt"><div><b>Simpan ke Google Drive</b><small>Unggah klip ke folder Drive setelah jadi.</small></div>
+        <span class="sw"><input type="checkbox" id="aiDrive" role="switch" aria-label="Simpan ke Google Drive"><i></i></span></div>
+      <div class="opt"><div><b>Rencana saja</b><small>AI memilih momen tanpa membuat klip. Bagus untuk mencoba.</small></div>
+        <span class="sw"><input type="checkbox" id="aiPlan" role="switch" aria-label="Rencana saja"><i></i></span></div>
+    </div>
+
+    <div class="card" data-ai="harian post">
+      <h2>Buffer</h2>
+      <div class="field"><span class="f" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">Channel</span>
+        <div class="pchk">
+          <label><input type="checkbox" name="aich" value="instagram" checked><span>Instagram</span></label>
+          <label><input type="checkbox" name="aich" value="facebook" checked><span>Facebook</span></label>
+          <label><input type="checkbox" name="aich" value="youtube" checked><span>YouTube</span></label>
+        </div></div>
+      <div class="field"><label class="f" for="aiSlots">Jam posting (WIB)</label>
+        <input id="aiSlots" type="text" autocomplete="off" value="08:00,12:00,19:00"></div>
+      <div class="opt" data-ai="post"><div><b>Cek jadwal saja</b><small>Tidak mengirim apa pun ke Buffer.</small></div>
+        <span class="sw"><input type="checkbox" id="aiDry" role="switch" aria-label="Cek jadwal saja" checked><i></i></span></div>
+      <div class="opt" data-ai="harian"><div><b>Buat klip saja</b><small>Jangan kirim ke Buffer.</small></div>
+        <span class="sw"><input type="checkbox" id="aiNoPost" role="switch" aria-label="Buat klip saja" checked><i></i></span></div>
+      <p class="note">Paket Buffer gratis: maksimal 10 posting terjadwal per channel. API key Buffer disimpan di <b>~/.config/clipper/buffer_key</b>.</p>
+    </div>
+
+    <div class="card">
+      <h2>Perintah untuk Termux</h2>
+      <pre class="cmd empty" id="aiCmd" tabindex="0"></pre>
+      <ul class="issues" id="aiIssues"></ul>
+      <div class="cmdrow"><button class="btn primary" id="aiCopy" type="button" disabled><svg><use href="#i-copy"/></svg> Salin perintah</button></div>
+    </div>
+  </section>
+
   <!-- ====================== JADWAL ====================== -->
   <section id="view-jadwal" class="view" aria-label="Jadwal posting" hidden>
     <div class="vh">
@@ -403,6 +513,7 @@ dialog h2{font-size:19px;margin-bottom:14px}
 
 <nav class="tabs" aria-label="Menu utama">
   <a class="tab" id="tab-buat" href="#buat"><svg><use href="#i-cut"/></svg>Buat</a>
+  <a class="tab" id="tab-ai" href="#ai"><svg><use href="#i-ai"/></svg>AI</a>
   <a class="tab" id="tab-jadwal" href="#jadwal"><svg><use href="#i-cal"/></svg>Jadwal</a>
   <a class="tab" id="tab-panduan" href="#panduan"><svg><use href="#i-book"/></svg>Panduan</a>
 </nav>
@@ -696,6 +807,124 @@ $('#partChips').addEventListener('click', (e) => {
 $('#view-buat').addEventListener('input', render);
 $('#view-buat').addEventListener('change', () => { applyMode(); render(); });
 
+/* ---------- halaman AI ---------- */
+const AI_DESC = {
+  ai: 'Satu video panjang jadi beberapa klip pilihan AI. Mulai dengan "Rencana saja" untuk mencoba.',
+  harian: 'Cari video sumber, buat klip, lalu jadwalkan ke Buffer 3 kali sehari. Cocok dijadwalkan lewat cron.',
+  riset: 'Hanya mencari video sumber yang cocok. Tidak membuat klip.',
+  post: 'Jadwalkan klip yang sudah jadi ke Buffer (Instagram, Facebook, YouTube).',
+};
+const aiMode = () => $('input[name=aimode]:checked').value;
+const aiNum = (id, def) => { const v = $(id).value.trim(); return v === '' ? def : v; };
+const isNum = (v) => /^\d+(\.\d+)?$/.test(v) && Number(v) > 0;
+
+function aiCompute() {
+  const m = aiMode(), issues = [], add = (t, soft) => issues.push({ m: t, soft: !!soft });
+  const prov = $('#aiProv').value;
+  const p = ['clip', m];
+  const chans = $$('input[name=aich]:checked').map((c) => c.value);
+  const lens = () => {
+    const mn = aiNum('#aiMin', '30'), mx = aiNum('#aiMax', '60');
+    if (!isNum(mn) || !isNum(mx)) add('Durasi min/maks harus angka.');
+    else if (Number(mn) >= Number(mx)) add('Durasi maksimal harus lebih besar dari minimal.');
+    return [mn, mx];
+  };
+  const clipOpts = () => {
+    const n = aiNum('#aiN', '3');
+    if (!isNum(n) || !Number.isInteger(Number(n))) add('Jumlah klip harus bilangan bulat.');
+    const [mn, mx] = lens();
+    return { n, mn, mx };
+  };
+  const common = (o) => {
+    p.push('-n', o.n);
+    if (o.mn !== '30') p.push('--min-len', o.mn);
+    if (o.mx !== '60') p.push('--max-len', o.mx);
+    if ($('#aiStyle').value !== 'pop' && m === 'ai') p.push('--sub-style', $('#aiStyle').value);
+    if (!$('#aiJudul').checked && m === 'ai') p.push('--no-judul');
+    if (!$('#aiReframe').checked) p.push('--no-reframe');
+    const wm = $('#aiWm').value.trim(); if (wm) p.push('--watermark', shq(wm));
+  };
+  const aiFlag = () => { if (prov !== 'claude') p.push('--ai', prov); };
+
+  if (m === 'ai') {
+    const url = $('#aiUrl').value.trim();
+    if (!url) add('Tempel link YouTube dulu.', true);
+    else if (!/^https?:\/\//i.test(url)) add('Link harus diawali https://');
+    else if (/XXXX|ID_VIDEO/.test(url)) add('Ini link contoh. Ganti dengan link video asli.');
+    p.push(shq(url || 'LINK'));
+    common(clipOpts()); aiFlag();
+    p.push('--yes');
+    if ($('#aiPlan').checked) p.push('--plan-only');
+    if ($('#aiDrive').checked) p.push('--upload', 'gdrive:Clipper');
+  } else if (m === 'harian') {
+    const o = clipOpts(), src = aiNum('#aiSrc', '1');
+    if (!isNum(src) || !Number.isInteger(Number(src))) add('Video sumber harus bilangan bulat.');
+    if (src !== '1') p.push('--sumber', src);
+    common(o); aiFlag();
+    const niche = $('#aiNiche').value.trim(); if (niche) p.push('--niche', shq(niche));
+    const q = $('#aiQuery').value.trim(); if (q) p.push('-q', shq(q));
+    if ($('#aiViews').value !== '20000') p.push('--min-views', $('#aiViews').value);
+    if ($('#aiNoPost').checked) p.push('--no-post');
+    else { addBuffer(p, chans, add); }
+    p.push('--yes');
+  } else if (m === 'riset') {
+    aiFlag();
+    const niche = $('#aiNiche').value.trim(); if (niche) p.push('--niche', shq(niche));
+    const q = $('#aiQuery').value.trim(); if (q) p.push('-q', shq(q));
+    if ($('#aiViews').value !== '20000') p.push('--min-views', $('#aiViews').value);
+  } else {
+    const f = $('#aiFolder').value.trim();
+    if (!f) add('Isi folder hasil klip.', true);
+    p.push(f ? (f.startsWith('~') ? f.replace(/'/g, '') : shq(f)) : 'FOLDER');
+    addBuffer(p, chans, add);
+    if ($('#aiDry').checked) p.push('--dry-run'); else p.push('--yes');
+  }
+  const ready = !issues.some((i) => !i.soft) && !issues.length;
+  return { issues, cmd: ready ? p.join(' ') : null };
+}
+function addBuffer(p, chans, add) {
+  if (!chans.length) add('Pilih minimal satu channel.');
+  else if (chans.length < 3) p.push('--channels', chans.join(','));
+  const slots = $('#aiSlots').value.trim();
+  if (!/^\d{1,2}:\d{2}(,\s*\d{1,2}:\d{2})*$/.test(slots)) add('Jam posting contoh: 08:00,12:00,19:00');
+  else if (slots.replace(/\s/g, '') !== '08:00,12:00,19:00') p.push('--slots', slots.replace(/\s/g, ''));
+}
+
+let aiCurrent = { cmd: null };
+function renderAI() {
+  const m = aiMode();
+  $$('[data-ai]').forEach((el) => { el.hidden = !el.dataset.ai.split(' ').includes(m); });
+  $('#aiDesc').textContent = AI_DESC[m];
+  const r = aiCompute(); aiCurrent = r;
+  const pre = $('#aiCmd');
+  pre.textContent = r.cmd || 'Lengkapi form di atas, perintahnya muncul di sini.';
+  pre.classList.toggle('empty', !r.cmd);
+  $('#aiIssues').replaceChildren(...r.issues.map((i) => h('li', { class: i.soft ? 'soft' : '' }, i.m)));
+  $('#aiCopy').disabled = !r.cmd;
+  save('clipper.ai', {
+    mode: m, prov: $('#aiProv').value, n: $('#aiN').value, src: $('#aiSrc').value, mn: $('#aiMin').value, mx: $('#aiMax').value,
+    style: $('#aiStyle').value, judul: $('#aiJudul').checked, reframe: $('#aiReframe').checked, wm: $('#aiWm').value,
+    drive: $('#aiDrive').checked, plan: $('#aiPlan').checked, slots: $('#aiSlots').value, noPost: $('#aiNoPost').checked,
+    dry: $('#aiDry').checked, views: $('#aiViews').value,
+  });
+}
+$('#view-ai').addEventListener('input', renderAI);
+$('#view-ai').addEventListener('change', renderAI);
+$('#aiPaste').addEventListener('click', async () => {
+  try { $('#aiUrl').value = (await navigator.clipboard.readText()).trim(); renderAI(); }
+  catch { toast('Tahan di kolom link lalu pilih Tempel'); $('#aiUrl').focus(); }
+});
+$('#aiCopy').addEventListener('click', async () => {
+  if (!aiCurrent.cmd) return;
+  const ok = await copyText(aiCurrent.cmd);
+  toast(ok ? 'Perintah disalin. Tempel di Termux.' : 'Gagal menyalin. Tahan teks perintah untuk menyalin manual.');
+  if (ok) {
+    const list = load('clipper.hist', []).filter((x) => x.cmd !== aiCurrent.cmd);
+    list.unshift({ cmd: aiCurrent.cmd, t: Date.now() });
+    save('clipper.hist', list.slice(0, 8)); renderHist();
+  }
+});
+
 /* ---------- halaman Jadwal ---------- */
 const pd = $('#planDialog');
 let editingId = null;
@@ -757,6 +986,8 @@ const STEPS = [
   { t: 'Unduh Clipper', c: 'pkg update -y && pkg install -y git && git clone https://github.com/06051gmbdg-prog/Make-clipper-video' },
   { t: 'Pasang semuanya', c: 'cd ~/Make-clipper-video && sh install.sh', d: 'Memasang python, ffmpeg, yt-dlp, rclone, dan membuat perintah clip. Ketuk Izinkan saat diminta akses penyimpanan.' },
   { t: 'Opsional: sambungkan Google Drive', c: 'rclone config create gdrive drive scope=drive.file', d: 'Buka link yang muncul di Chrome HP, masuk ke akun Google, lalu izinkan. Tes dengan: rclone lsd gdrive:' },
+  { t: 'Pasang API key AI', c: 'mkdir -p ~/.config/clipper && read -rs K && printf %s "$K" > ~/.config/clipper/anthropic_key', d: 'Jalankan, tempel key (tidak tampil di layar), lalu Enter. Jangan bagikan key ke siapa pun. Tanpa key, pilih AI "Lokal" di tab AI.' },
+  { t: 'Coba AI (rencana saja)', d: 'Buka tab AI, tempel link, nyalakan "Rencana saja", salin perintahnya. Kalau hasil rencana bagus, matikan lalu jalankan lagi untuk membuat klip.' },
   { t: 'Jalankan', c: 'clip', d: 'Ikuti pertanyaannya: link, waktu, gaya teks, dan Drive. Atau susun perintah lengkap di tab Buat lalu tempel.' },
   { t: 'Perbarui kapan saja', c: 'clip update', d: 'Jalankan setiap kali ada fitur baru di repo.' },
 ];
@@ -781,7 +1012,7 @@ function progress() {
 }
 
 /* ---------- navigasi tab ---------- */
-const VIEWS = ['buat', 'jadwal', 'panduan'];
+const VIEWS = ['buat', 'ai', 'jadwal', 'panduan'];
 function route() {
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'buat';
   VIEWS.forEach((n) => {
@@ -817,8 +1048,20 @@ if (o) {
   E.wm.value = o.watermark || ''; E.file.value = o.file || '';
   E.optD.checked = !!o.optD; E.drive.value = o.drive || '';
 }
+const oa = load('clipper.ai', null);
+if (oa) {
+  const set = (id, v) => { if (v != null && $(id)) $(id).value = v; };
+  const rd = $(`input[name=aimode][value="${oa.mode}"]`); if (rd) rd.checked = true;
+  if ([...$('#aiProv').options].some((x) => x.value === oa.prov)) $('#aiProv').value = oa.prov;
+  if ([...$('#aiStyle').options].some((x) => x.value === oa.style)) $('#aiStyle').value = oa.style;
+  if ([...$('#aiViews').options].some((x) => x.value === oa.views)) $('#aiViews').value = oa.views;
+  set('#aiN', oa.n); set('#aiSrc', oa.src); set('#aiMin', oa.mn); set('#aiMax', oa.mx); set('#aiWm', oa.wm); set('#aiSlots', oa.slots);
+  $('#aiJudul').checked = oa.judul !== false; $('#aiReframe').checked = oa.reframe !== false;
+  $('#aiDrive').checked = !!oa.drive; $('#aiPlan').checked = !!oa.plan;
+  $('#aiNoPost').checked = oa.noPost !== false; $('#aiDry').checked = oa.dry !== false;
+}
 addRow(); addRow();
-applyMode(); renderHist(); renderPlans(); renderSteps(); route(); render();
+applyMode(); renderHist(); renderPlans(); renderSteps(); route(); render(); renderAI();
 })();
 </script>
 </body>
