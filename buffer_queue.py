@@ -20,12 +20,23 @@ KEY_FILE = os.path.join(CONFIG_DIR, "buffer_key")
 STATE_FILE = os.path.join(CONFIG_DIR, "buffer_state.json")
 TZ = dt.timezone(dt.timedelta(hours=7))  # WIB (Asia/Jakarta, tanpa DST)
 
-# ID channel Buffer milik akun ini (lihat Buffer > channel). Ganti lewat --channel-id nama=ID.
-CHANNELS = {
-    "instagram": "6afccbd5ece6dfde5ffef86d",
-    "facebook": "6b001158ece6dfde5f2f48ff",
-    "youtube": "6ae4d8412f1f5ed6482370f4",
-}
+CHANNELS_FILE = os.path.join(CONFIG_DIR, "buffer_channels.json")
+
+
+def load_channels() -> dict:
+    """ID channel Buffer milik akunmu, disimpan lokal (bukan di repo): {"instagram": "ID", ...}."""
+    try:
+        with open(CHANNELS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return {str(k): str(v) for k, v in data.items() if v}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def save_channels(channels: dict):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with open(CHANNELS_FILE, "w", encoding="utf-8") as f:
+        json.dump(channels, f, indent=2)
 
 
 def gql(s: str) -> str:
@@ -153,7 +164,8 @@ def main(argv=None) -> int:
     p.add_argument("folder", help="Folder hasil `clip ai` (berisi plan.json dan file mp4)")
     p.add_argument("--drive", default="gdrive:Clipper/Buffer", help="Folder Drive tempat video diunggah (default gdrive:Clipper/Buffer)")
     p.add_argument("--channels", default="instagram,facebook,youtube", help="Channel tujuan, dipisah koma")
-    p.add_argument("--channel-id", action="append", default=[], metavar="NAMA=ID", help="Timpa ID channel Buffer")
+    p.add_argument("--channel-id", action="append", default=[], metavar="NAMA=ID", help="ID channel Buffer (simpan permanen dengan --save-channels)")
+    p.add_argument("--save-channels", action="store_true", help="Simpan --channel-id ke ~/.config/clipper/buffer_channels.json")
     p.add_argument("--slots", default="08:00,12:00,19:00", help="Jam posting harian WIB (default 08:00,12:00,19:00)")
     p.add_argument("--start-date", help="Mulai dari tanggal ini (YYYY-MM-DD), default: slot kosong berikutnya")
     p.add_argument("--no-credit", action="store_true", help="Jangan tulis link sumber di caption")
@@ -161,10 +173,18 @@ def main(argv=None) -> int:
     p.add_argument("--dry-run", action="store_true", help="Tampilkan jadwal saja, tidak mengunggah/membuat posting")
     args = p.parse_args(argv)
 
-    channels = dict(CHANNELS)
+    channels = load_channels()
     for item in args.channel_id:
         name, _, cid = item.partition("=")
-        channels[name.strip()] = cid.strip()
+        if name.strip() and cid.strip():
+            channels[name.strip()] = cid.strip()
+    if args.channel_id and args.save_channels:
+        save_channels(channels)
+        print(f"ID channel disimpan di {CHANNELS_FILE}")
+    if not channels:
+        sys.exit("ID channel Buffer belum diatur. Simpan sekali (ID ada di Buffer > channel):\n"
+                 "  clip post FOLDER --channel-id instagram=ID --channel-id facebook=ID "
+                 "--channel-id youtube=ID --save-channels")
     wanted = [c.strip() for c in args.channels.split(",") if c.strip()]
     unknown = [c for c in wanted if c not in channels]
     if unknown:

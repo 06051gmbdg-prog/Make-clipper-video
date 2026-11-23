@@ -226,7 +226,7 @@ clip post ~/storage/downloads/ABIDIN_AI/ID_VIDEO --dry-run   # lihat jadwal dulu
 clip post ~/storage/downloads/ABIDIN_AI/ID_VIDEO             # kirim, dengan konfirmasi
 ```
 
-Opsi: `--channels instagram,youtube`, `--slots 07:00,13:00,20:00`, `--drive gdrive:Clipper/Buffer`, `--no-credit`, `--yes`. ID channel diatur di `buffer_queue.py` (`CHANNELS`) atau lewat `--channel-id nama=ID`.
+Opsi: `--channels instagram,youtube`, `--slots 07:00,13:00,20:00`, `--drive gdrive:Clipper/Buffer`, `--no-credit`, `--yes`. ID channel Buffer disimpan lokal di `~/.config/clipper/buffer_channels.json` (tidak ikut repo). Simpan sekali: `clip post FOLDER --channel-id instagram=ID --channel-id facebook=ID --channel-id youtube=ID --save-channels`.
 
 **`clip harian`** menjalankan semuanya: riset, ambil 1 video sumber, 3 klip, jadwalkan. Video tanpa caption dilewati otomatis. Video yang sudah dipakai tidak diulang.
 
