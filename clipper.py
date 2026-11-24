@@ -547,7 +547,7 @@ def build_filters(vertical: bool, watermark: str | None) -> list[str]:
     filters = []
     if vertical:
         # Potong tengah menjadi 9:16 lalu skala ke 1080x1920
-        filters.append("crop=ih*9/16:ih,scale=1080:1920")
+        filters.append("crop=trunc(ih*9/32)*2:ih,scale=1080:1920")
     if watermark:
         safe = watermark.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
         filters.append(
@@ -572,14 +572,38 @@ def output_names(output: str, count: int) -> list[str]:
 
 
 def render(src: str, dst: str, offset: float, duration: float, filters: list[str]):
-    """Potong `duration` detik mulai dari `offset` di file sumber."""
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-stats", "-y",
-           "-ss", f"{offset:.3f}", "-i", src, "-t", f"{duration:.3f}"]
+    """Potong `duration` detik mulai dari `offset` di file sumber.
+
+    Hasil ditulis dulu ke penyimpanan internal lalu disalin ke tujuan, karena menulis langsung ke
+    Download/sdcard (FUSE) sering gagal pada +faststart (ffmpeg keluar dengan kode 234).
+    """
+    tmp_dir = tempfile.mkdtemp(prefix="clip_")
+    tmp_out = os.path.join(tmp_dir, "out.mp4")
+    base = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-stats", "-y",
+            "-ss", f"{offset:.3f}", "-i", src, "-t", f"{duration:.3f}"]
     if filters:
-        cmd += ["-vf", ",".join(filters)]
-    cmd += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dst]
-    subprocess.run(cmd, check=True)
+        base += ["-vf", ",".join(filters)]
+    tries = [
+        ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart"],
+        # cadangan: tanpa faststart dan encoder lebih ringan (HP dengan memori terbatas)
+        ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p",
+         "-c:a", "aac", "-b:a", "128k"],
+    ]
+    try:
+        for n, opts in enumerate(tries):
+            res = subprocess.run(base + opts + [tmp_out])
+            if res.returncode == 0:
+                break
+            if n == 0:
+                print("  ffmpeg gagal, mencoba lagi dengan pengaturan lebih ringan...")
+        else:
+            sys.exit("ffmpeg gagal membuat klip (kode %d). Kirim baris error ffmpeg di atas ini "
+                     "supaya bisa dicek." % res.returncode)
+        os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
+        shutil.copyfile(tmp_out, dst)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def render_segments(src: str, base: float, segments: list[tuple[float, float]],
